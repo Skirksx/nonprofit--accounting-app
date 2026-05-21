@@ -1,0 +1,11 @@
+name = "nonprofit-accounting-mvp"
+main = "src/index.ts"
+compatibility_date = "2026-05-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nonprofit_accounting"
+database_id = "replace-with-cloudflare-d1-database-id"
+
+[vars]
+APP_NAME = "Nonprofit Ledger"

@@ -1,0 +1,78 @@
+import type { AccountType, NormalBalance } from "./types";
+
+export type ValidationResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; errors: Record<string, string> };
+
+export function validateLogin(form: FormData): ValidationResult<{ email: string; password: string }> {
+  const email = stringValue(form, "email").toLowerCase();
+  const password = stringValue(form, "password");
+  const errors: Record<string, string> = {};
+
+  if (!isEmail(email)) errors.email = "Enter a valid email address.";
+  if (password.length < 8) errors.password = "Password must be at least 8 characters.";
+
+  return finish(errors, { email, password });
+}
+
+export function validateSetup(form: FormData): ValidationResult<{
+  organizationName: string;
+  fiscalYearStartMonth: number;
+  name: string;
+  email: string;
+  password: string;
+}> {
+  const organizationName = stringValue(form, "organizationName");
+  const fiscalYearStartMonth = Number(stringValue(form, "fiscalYearStartMonth"));
+  const name = stringValue(form, "name");
+  const email = stringValue(form, "email").toLowerCase();
+  const password = stringValue(form, "password");
+  const errors: Record<string, string> = {};
+
+  if (organizationName.length < 2) errors.organizationName = "Organization name is required.";
+  if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) {
+    errors.fiscalYearStartMonth = "Choose a valid fiscal year start month.";
+  }
+  if (name.length < 2) errors.name = "Your name is required.";
+  if (!isEmail(email)) errors.email = "Enter a valid email address.";
+  if (password.length < 12) errors.password = "Use at least 12 characters for the owner password.";
+
+  return finish(errors, { organizationName, fiscalYearStartMonth, name, email, password });
+}
+
+export function validateAccount(form: FormData): ValidationResult<{
+  code: string;
+  name: string;
+  type: AccountType;
+  normalBalance: NormalBalance;
+}> {
+  const code = stringValue(form, "code");
+  const name = stringValue(form, "name");
+  const type = stringValue(form, "type") as AccountType;
+  const normalBalance = stringValue(form, "normalBalance") as NormalBalance;
+  const errors: Record<string, string> = {};
+
+  if (!/^[0-9]{3,12}$/.test(code)) errors.code = "Use a numeric account code, 3-12 digits.";
+  if (name.length < 2) errors.name = "Account name is required.";
+  if (!["asset", "liability", "net_asset", "revenue", "expense"].includes(type)) {
+    errors.type = "Choose a valid account type.";
+  }
+  if (!["debit", "credit"].includes(normalBalance)) {
+    errors.normalBalance = "Choose debit or credit.";
+  }
+
+  return finish(errors, { code, name, type, normalBalance });
+}
+
+function stringValue(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function finish<T>(errors: Record<string, string>, data: T): ValidationResult<T> {
+  return Object.keys(errors).length > 0 ? { ok: false, errors } : { ok: true, data };
+}
