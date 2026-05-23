@@ -121,7 +121,7 @@ For Render, use these commands:
 Build Command:
 
 ```sh
-npm install && npm run build
+npm run render-build
 ```
 
 Start Command:
