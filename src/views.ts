@@ -1,7 +1,16 @@
 import type { ChartAccount } from "./accounts.ts";
 import type { JournalEntrySummary } from "./journalEntries.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
-import type { Fund, StatementOfActivitiesReport, StatementOfActivitiesRow } from "./reports.ts";
+import type {
+  BalanceSheetReport,
+  BudgetVsActualReport,
+  BudgetVsActualRow,
+  FinancialReportRow,
+  Fund,
+  IncomeStatementReport,
+  StatementOfActivitiesReport,
+  StatementOfActivitiesRow
+} from "./reports.ts";
 import type { AccountType, AuthContext } from "./types.ts";
 
 export function layout(options: {
@@ -680,6 +689,7 @@ export function statementOfActivitiesPage(
         <h1>Statement of Activities</h1>
         <p class="muted">Posted revenue and expense activity from journal entry lines.</p>
       </section>
+      ${reportNav()}
       <form method="get" action="/reports/statement-of-activities" class="grid-form report-filter">
         ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
         ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
@@ -705,6 +715,193 @@ export function statementOfActivitiesPage(
               <div class="report-net">
                 <span>Change in net assets</span>
                 <strong>${formatMoney(report.changeInNetAssetsCents)}</strong>
+              </div>
+            </section>`
+          : ""
+      }`
+  });
+}
+
+export function balanceSheetPage(
+  appName: string,
+  context: AuthContext,
+  funds: Fund[],
+  report: BalanceSheetReport | null,
+  errors: Record<string, string> = {}
+): Response {
+  return layout({
+    title: "Balance Sheet",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Balance Sheet</h1>
+        <p class="muted">Assets, liabilities, and net assets from posted journal entries.</p>
+      </section>
+      ${reportNav()}
+      <form method="get" action="/reports/balance-sheet" class="grid-form report-filter">
+        ${dateFilterField("As of date", "asOfDate", errors.asOfDate, report?.filters.asOfDate)}
+        <label>Fund
+          <select name="fundId">
+            <option value="">All funds</option>
+            ${fundOptions(funds, report?.filters.fundId)}
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="submit">Run report</button>
+        </div>
+      </form>
+      ${
+        report
+          ? `<section class="content-band report-section">
+              <h2>Assets</h2>
+              ${financialRowsTable(report.assets)}
+              ${reportTotal("Total assets", report.totalAssetsCents)}
+              <h2>Liabilities</h2>
+              ${financialRowsTable(report.liabilities)}
+              ${reportTotal("Total liabilities", report.totalLiabilitiesCents)}
+              <h2>Net assets</h2>
+              ${financialRowsTable([
+                ...report.netAssets,
+                ...(report.operatingChangeCents !== 0
+                  ? [{
+                      account_id: "current_change",
+                      account_number: "",
+                      account_name: "Current change in net assets",
+                      account_type: "net_asset" as AccountType,
+                      amount_cents: report.operatingChangeCents
+                    }]
+                  : [])
+              ])}
+              ${reportTotal("Total net assets", report.totalNetAssetsCents)}
+              <div class="report-net">
+                <span>Total liabilities and net assets</span>
+                <strong>${formatMoney(report.totalLiabilitiesAndNetAssetsCents)}</strong>
+              </div>
+            </section>`
+          : ""
+      }`
+  });
+}
+
+export function incomeStatementPage(
+  appName: string,
+  context: AuthContext,
+  funds: Fund[],
+  report: IncomeStatementReport | null,
+  errors: Record<string, string> = {}
+): Response {
+  return layout({
+    title: "Income Statement",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Income Statement</h1>
+        <p class="muted">Revenue, expenses, and net income from posted journal entries.</p>
+      </section>
+      ${reportNav()}
+      <form method="get" action="/reports/income-statement" class="grid-form report-filter">
+        ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
+        ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
+        <label>Fund
+          <select name="fundId">
+            <option value="">All funds</option>
+            ${fundOptions(funds, report?.filters.fundId)}
+          </select>
+        </label>
+        <div class="form-actions">
+          <button type="submit">Run report</button>
+        </div>
+      </form>
+      ${
+        report
+          ? `<section class="content-band report-section">
+              <h2>Revenue</h2>
+              ${financialRowsTable(report.revenues)}
+              ${reportTotal("Total revenue", report.totalRevenueCents)}
+              <h2>Expenses</h2>
+              ${financialRowsTable(report.expenses)}
+              ${reportTotal("Total expenses", report.totalExpenseCents)}
+              <div class="report-net">
+                <span>Net income</span>
+                <strong>${formatMoney(report.netIncomeCents)}</strong>
+              </div>
+            </section>`
+          : ""
+      }`
+  });
+}
+
+export function budgetVsActualPage(
+  appName: string,
+  context: AuthContext,
+  funds: Fund[],
+  accounts: ChartAccount[],
+  report: BudgetVsActualReport | null,
+  errors: Record<string, string> = {}
+): Response {
+  const budgetAccounts = accounts.filter(
+    (account) => account.status === "active" && ["revenue", "expense"].includes(account.account_type)
+  );
+  const year = report?.filters.fiscalYear ?? new Date().getFullYear();
+
+  return layout({
+    title: "Budget vs Actual",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Budget vs Actual</h1>
+        <p class="muted">Compare budget lines with posted revenue and expense activity.</p>
+      </section>
+      ${reportNav()}
+      <section class="split">
+        <form method="get" action="/reports/budget-vs-actual" class="form-card">
+          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(year), "2026")}
+          ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
+          ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
+          <label>Fund
+            <select name="fundId">
+              <option value="">All funds</option>
+              ${fundOptions(funds, report?.filters.fundId)}
+            </select>
+          </label>
+          <button type="submit">Run report</button>
+        </form>
+        <form method="post" action="/reports/budget-lines" class="form-card">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <h2>Add budget line</h2>
+          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(year), "2026")}
+          <label>Account
+            <select name="accountId">
+              ${accountOptions(budgetAccounts, "No active revenue or expense accounts")}
+            </select>
+            ${errorText(errors.accountId)}
+          </label>
+          <label>Fund
+            <select name="fundId">
+              <option value="">All funds</option>
+              ${fundOptions(funds)}
+            </select>
+            ${errorText(errors.fundId)}
+          </label>
+          <label>Budget amount
+            <input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required>
+            ${errorText(errors.amount)}
+          </label>
+          <button type="submit">Add budget line</button>
+        </form>
+      </section>
+      ${
+        report
+          ? `<section class="content-band report-section">
+              ${budgetVsActualTable(report.rows)}
+              ${reportTotal("Total budget", report.totalBudgetCents)}
+              ${reportTotal("Total actual", report.totalActualCents)}
+              <div class="report-net">
+                <span>Total variance</span>
+                <strong>${formatMoney(report.totalVarianceCents)}</strong>
               </div>
             </section>`
           : ""
@@ -743,6 +940,13 @@ export function html(body: string, init?: ResponseInit): Response {
 function field(labelText: string, name: string, type: string, error?: string, placeholder = ""): string {
   return `<label>${escapeHtml(labelText)}
     <input name="${escapeHtml(name)}" type="${escapeHtml(type)}" placeholder="${escapeHtml(placeholder)}" ${type === "password" ? "autocomplete=\"new-password\"" : ""} required>
+    ${errorText(error)}
+  </label>`;
+}
+
+function fieldWithValue(labelText: string, name: string, type: string, error?: string, value = "", placeholder = ""): string {
+  return `<label>${escapeHtml(labelText)}
+    <input name="${escapeHtml(name)}" type="${escapeHtml(type)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" required>
     ${errorText(error)}
   </label>`;
 }
@@ -919,6 +1123,60 @@ function statementRowsTable(rows: StatementOfActivitiesRow[]): string {
       <tbody>${body}</tbody>
     </table>
   </div>`;
+}
+
+function financialRowsTable(rows: FinancialReportRow[]): string {
+  const body = rows.length
+    ? rows
+        .map(
+          (row) => `<tr>
+            <td>${escapeHtml(row.account_number)}</td>
+            <td>${escapeHtml(row.account_name)}</td>
+            <td class="amount">${formatMoney(row.amount_cents)}</td>
+          </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="3" class="empty">No activity.</td></tr>`;
+
+  return `<div class="table-wrap report-table">
+    <table>
+      <thead><tr><th>Account</th><th>Name</th><th>Amount</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
+function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
+  const body = rows.length
+    ? rows
+        .map(
+          (row) => `<tr>
+            <td>${escapeHtml(row.account_number)}</td>
+            <td>${escapeHtml(row.account_name)}</td>
+            <td>${formatAccountType(row.account_type)}</td>
+            <td class="amount">${formatMoney(row.budget_cents)}</td>
+            <td class="amount">${formatMoney(row.actual_cents)}</td>
+            <td class="amount">${formatMoney(row.variance_cents)}</td>
+          </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="6" class="empty">No budget or actual activity.</td></tr>`;
+
+  return `<div class="table-wrap report-table">
+    <table>
+      <thead><tr><th>Account</th><th>Name</th><th>Type</th><th>Budget</th><th>Actual</th><th>Variance</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
+function reportNav(): string {
+  return `<nav class="report-nav" aria-label="Financial reports">
+    <a href="/reports/balance-sheet">Balance Sheet</a>
+    <a href="/reports/income-statement">Income Statement</a>
+    <a href="/reports/statement-of-activities">Statement of Activities</a>
+    <a href="/reports/budget-vs-actual">Budget vs Actual</a>
+  </nav>`;
 }
 
 function reportTotal(label: string, amountCents: number): string {

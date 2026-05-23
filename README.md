@@ -12,6 +12,8 @@ A low-cost nonprofit accounting foundation built with TypeScript, Cloudflare Wor
 - Journal entry system with headers, multiple lines, draft/post status, and debit/credit balancing before posting
 - Simple income and expense transaction entry screen backed by the journal entry system
 - Statement of Activities report from posted journal lines with date range and fund filters
+- Balance Sheet, Income Statement, and Budget vs Actual reports for small nonprofit reporting
+- Budget line entry by fiscal year, account, and optional fund
 - Settings page for profile name, password changes, and dashboard logo upload
 - Payroll entry, pay statement PDFs, tax report PDFs, CSV export, and CSV payroll import
 - Server-side form validation
@@ -31,6 +33,7 @@ Key files:
 - `src/journalEntries.ts`: journal entry validation, draft creation, and posting rules
 - `src/transactions.ts`: simple income/expense entry workflow that creates and posts journal entries
 - `src/reports.ts`: reporting queries for funds and Statement of Activities
+- `migrations/0005_budget_lines.sql`: budget storage for Budget vs Actual reporting
 - `src/payroll.ts`: payroll calculations, journal entry creation, PDFs, CSV export, and CSV import validation
 - `src/settings.ts`: profile, password, and logo upload helpers
 - `src/database.ts`: PostgreSQL connection helper for a Render/Neon Node.js deployment using `DATABASE_URL`
@@ -182,10 +185,31 @@ The foundation includes four roles:
 
 The chart of accounts creation route currently requires at least `accountant`.
 
+## Financial reports
+
+The Reports tab includes:
+
+- Balance Sheet: assets, liabilities, and net assets as of a selected date.
+- Income Statement: revenue, expenses, and net income for a selected date range.
+- Statement of Activities: nonprofit revenue and expense activity with fund filtering.
+- Budget vs Actual: fiscal-year budget lines compared with posted revenue and expense activity.
+
+After pulling this update locally, apply the new budget migration before using Budget vs Actual:
+
+```sh
+npm run db:migrate:local
+```
+
+For production D1, use:
+
+```sh
+npm run db:migrate:remote
+```
+
+Render/Neon creates the budget table automatically when the server starts.
+
 ## Next build phases
 
-1. Add funds, restrictions, and grant tracking.
-2. Add journal entries with balanced debit/credit validation.
-3. Add reporting views for statement of activity, financial position, and budget vs actuals.
-4. Add user invitations and role management.
-5. Add audit logs for financial changes.
+1. Add user invitations and role management.
+2. Add audit logs for financial changes.
+3. Add check printing or bill pay workflows.

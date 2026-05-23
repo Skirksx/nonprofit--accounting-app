@@ -26,7 +26,20 @@ import {
   validatePayrollCsvImport,
   validatePayrollEntryForm
 } from "./payroll.ts";
-import { createFund, listFunds, parseStatementOfActivitiesFilters, statementOfActivities } from "./reports.ts";
+import {
+  balanceSheet,
+  budgetVsActual,
+  createBudgetLine,
+  createFund,
+  incomeStatement,
+  listFunds,
+  parseBalanceSheetFilters,
+  parseBudgetVsActualFilters,
+  parseFinancialReportFilters,
+  parseStatementOfActivitiesFilters,
+  statementOfActivities,
+  validateBudgetLineForm
+} from "./reports.ts";
 import {
   logoFileToDataUrl,
   updateOrganizationLogo,
@@ -41,8 +54,11 @@ import type { Env, RouteHandler } from "./types.ts";
 import { validateAccount, validateLogin, validateSetup } from "./validation.ts";
 import {
   accountsPage,
+  balanceSheetPage,
+  budgetVsActualPage,
   dashboardPage,
   fundsPage,
+  incomeStatementPage,
   journalEntryPage,
   loginPage,
   organizationAlreadyConfiguredPage,
@@ -82,6 +98,10 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/profile", handler: postSettingsProfile },
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
+  { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
+  { method: "GET", path: "/reports/income-statement", handler: getIncomeStatement },
+  { method: "GET", path: "/reports/budget-vs-actual", handler: getBudgetVsActual },
+  { method: "POST", path: "/reports/budget-lines", handler: postBudgetLines },
   { method: "GET", path: "/reports/statement-of-activities", handler: getStatementOfActivities },
   { method: "GET", path: "/transactions/new", handler: getNewTransaction },
   { method: "POST", path: "/transactions", handler: postTransaction },
@@ -575,6 +595,77 @@ async function postSettingsLogo(request: Request, env: Env): Promise<Response> {
 
   await updateOrganizationLogo(env, context.organization.id, result.data.logoDataUrl);
   return redirect("/settings");
+}
+
+async function getBalanceSheet(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const url = new URL(request.url);
+  const filters = parseBalanceSheetFilters(url, context.organization.id);
+  const funds = await listFunds(env, context.organization.id);
+  if ("errors" in filters) return balanceSheetPage(env.APP_NAME, context, funds, null, filters.errors);
+
+  const report = await balanceSheet(env, filters);
+  return balanceSheetPage(env.APP_NAME, context, funds, report);
+}
+
+async function getIncomeStatement(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const url = new URL(request.url);
+  const filters = parseFinancialReportFilters(url, context.organization.id);
+  const funds = await listFunds(env, context.organization.id);
+  if ("errors" in filters) return incomeStatementPage(env.APP_NAME, context, funds, null, filters.errors);
+
+  const report = await incomeStatement(env, filters);
+  return incomeStatementPage(env.APP_NAME, context, funds, report);
+}
+
+async function getBudgetVsActual(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const url = new URL(request.url);
+  const filters = parseBudgetVsActualFilters(url, context.organization.id);
+  const [funds, accounts] = await Promise.all([
+    listFunds(env, context.organization.id),
+    listAccounts(env, context.organization.id)
+  ]);
+  if ("errors" in filters) return budgetVsActualPage(env.APP_NAME, context, funds, accounts, null, filters.errors);
+
+  const report = await budgetVsActual(env, filters);
+  return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report);
+}
+
+async function postBudgetLines(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const [funds, accounts] = await Promise.all([
+    listFunds(env, context.organization.id),
+    listAccounts(env, context.organization.id)
+  ]);
+  const result = validateBudgetLineForm(form, accounts, funds, context.organization.id);
+  if (!result.ok) {
+    const year = Number(form.get("fiscalYear") ?? new Date().getFullYear());
+    const report = await budgetVsActual(env, {
+      organizationId: context.organization.id,
+      fiscalYear: Number.isInteger(year) ? year : new Date().getFullYear()
+    });
+    return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report, result.errors);
+  }
+
+  await createBudgetLine(env, result.data);
+  return redirect(`/reports/budget-vs-actual?fiscalYear=${result.data.fiscalYear}`);
 }
 
 async function getNewTransaction(request: Request, env: Env): Promise<Response> {

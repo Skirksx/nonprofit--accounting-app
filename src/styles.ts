@@ -372,6 +372,27 @@ h2 {
   margin-bottom: 1.5rem;
 }
 
+.report-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.report-nav a {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.65rem 0.8rem;
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.report-nav a:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
 .report-section {
   display: grid;
   gap: 1rem;
