@@ -127,14 +127,13 @@ npm run render-build
 Start Command:
 
 ```sh
-npm start
+yarn start
 ```
 
 For local Render-style testing, run:
 
 ```sh
-npm run build
-npm start
+yarn start
 ```
 
 ## Remote deployment

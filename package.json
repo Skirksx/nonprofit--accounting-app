@@ -9,7 +9,7 @@
   "scripts": {
     "render-build": "npm install --include=dev && npm run build",
     "build": "tsc -p tsconfig.server.json",
-    "start": "node dist/server.js",
+    "start": "node server.js",
     "dev:render": "node --experimental-strip-types src/server.ts",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
