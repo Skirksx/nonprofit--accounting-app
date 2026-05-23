@@ -284,6 +284,19 @@ export function createRenderServer(env: Env) {
   });
 }
 
+export async function startRenderServer(): Promise<void> {
+  const pool = getDatabasePool();
+  await ensurePostgresSchema(pool);
+  const server = createRenderServer({
+    DB: new PgD1Database(pool) as unknown as Env["DB"],
+    APP_NAME: process.env.APP_NAME ?? "Nonprofit Ledger"
+  });
+  const port = resolvePort();
+  server.listen(port, () => {
+    console.log(`Server listening on port ${port}`);
+  });
+}
+
 function normalizeRow<T extends QueryResultRow>(row: T): QueryResultRow {
   const normalized: QueryResultRow = { ...row };
   for (const [key, value] of Object.entries(row)) {
@@ -326,14 +339,5 @@ async function readBody(incoming: IncomingMessage): Promise<Buffer> {
 }
 
 if (isMainModule(import.meta.url)) {
-  const pool = getDatabasePool();
-  await ensurePostgresSchema(pool);
-  const server = createRenderServer({
-    DB: new PgD1Database(pool) as unknown as Env["DB"],
-    APP_NAME: process.env.APP_NAME ?? "Nonprofit Ledger"
-  });
-  const port = resolvePort();
-  server.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
-  });
+  await startRenderServer();
 }
