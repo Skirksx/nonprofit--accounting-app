@@ -31,6 +31,7 @@ Key files:
 - `src/transactions.ts`: simple income/expense entry workflow that creates and posts journal entries
 - `src/reports.ts`: reporting queries for funds and Statement of Activities
 - `src/settings.ts`: profile, password, and logo upload helpers
+- `src/database.ts`: PostgreSQL connection helper for a Render/Neon Node.js deployment using `DATABASE_URL`
 - `src/validation.ts`: server-side validation
 - `src/views.ts`: server-rendered pages
 - `src/styles.ts`: responsive UI styles
@@ -69,6 +70,72 @@ Key files:
    ```sh
    npm test
    ```
+
+## Environment variables for Render and Neon
+
+For a Render deployment with Neon PostgreSQL, do not hardcode the database password or connection string. Set it as an environment variable named `DATABASE_URL`.
+
+1. Copy the sample local environment file:
+
+   ```sh
+   cp .env.example .env
+   ```
+
+2. Put your Neon connection string in `.env`:
+
+   ```env
+   DATABASE_URL=postgresql://username:password@ep-example.neon.tech/neondb?sslmode=require
+   ```
+
+3. In Render, add the same environment variable under your service settings:
+
+   ```text
+   DATABASE_URL = your Neon PostgreSQL connection string
+   ```
+
+4. Use the PostgreSQL helper from `src/database.ts` in Node.js server code:
+
+   ```ts
+   import { query } from "./database.ts";
+
+   const result = await query("SELECT NOW()");
+   console.log(result.rows);
+   ```
+
+The real `.env` file is ignored by Git so credentials do not get uploaded to GitHub.
+
+## Render port configuration
+
+Render provides the public web port through `process.env.PORT`. The Node server entry in `src/server.ts` uses that value automatically and falls back to port `3000` for local development.
+
+```ts
+const port = Number(process.env.PORT) || 3000;
+
+server.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
+```
+
+For Render, use these commands:
+
+Build Command:
+
+```sh
+npm install && npm run build
+```
+
+Start Command:
+
+```sh
+npm start
+```
+
+For local Render-style testing, run:
+
+```sh
+npm run build
+npm start
+```
 
 ## Remote deployment
 

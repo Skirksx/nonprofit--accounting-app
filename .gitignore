@@ -1,5 +1,50 @@
+# Dependencies
 node_modules/
-.wrangler/
+
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
 .dev.vars
+
+# Build output
 dist/
+build/
+.next/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# Cloudflare / local development state
+.wrangler/
+
+# Cache folders
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+
+# OS and editor files
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Optional local files
+*.local
