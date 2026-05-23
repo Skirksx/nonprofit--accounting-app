@@ -1,9 +1,13 @@
 /// <reference types="node" />
 
 import { config } from "dotenv";
-import { Pool, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
+import { Pool, types, type PoolConfig, type QueryResult, type QueryResultRow } from "pg";
 
 config({ quiet: true });
+
+types.setTypeParser(20, (value) => Number(value));
+types.setTypeParser(21, (value) => Number(value));
+types.setTypeParser(23, (value) => Number(value));
 
 let pool: Pool | null = null;
 

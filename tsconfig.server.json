@@ -11,5 +11,5 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src/server.ts", "src/database.ts"]
+  "include": ["src/server.ts", "src/renderServer.ts", "src/database.ts"]
 }

@@ -121,7 +121,7 @@ For Render, use these commands:
 Build Command:
 
 ```sh
-npm run render-build
+yarn install --production=false
 ```
 
 Start Command:
