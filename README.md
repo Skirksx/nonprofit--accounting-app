@@ -13,6 +13,7 @@ A low-cost nonprofit accounting foundation built with TypeScript, Cloudflare Wor
 - Simple income and expense transaction entry screen backed by the journal entry system
 - Statement of Activities report from posted journal lines with date range and fund filters
 - Settings page for profile name, password changes, and dashboard logo upload
+- Payroll entry, pay statement PDFs, tax report PDFs, CSV export, and CSV payroll import
 - Server-side form validation
 - Role-based access control primitives
 - D1 database migration for organizations, users, members, sessions, and accounts
@@ -30,6 +31,7 @@ Key files:
 - `src/journalEntries.ts`: journal entry validation, draft creation, and posting rules
 - `src/transactions.ts`: simple income/expense entry workflow that creates and posts journal entries
 - `src/reports.ts`: reporting queries for funds and Statement of Activities
+- `src/payroll.ts`: payroll calculations, journal entry creation, PDFs, CSV export, and CSV import validation
 - `src/settings.ts`: profile, password, and logo upload helpers
 - `src/database.ts`: PostgreSQL connection helper for a Render/Neon Node.js deployment using `DATABASE_URL`
 - `src/validation.ts`: server-side validation
@@ -103,6 +105,17 @@ For a Render deployment with Neon PostgreSQL, do not hardcode the database passw
    ```
 
 The real `.env` file is ignored by Git so credentials do not get uploaded to GitHub.
+
+## Payroll CSV import
+
+On the Payroll page, download the import template first. Fill in one row per paycheck and upload the CSV from the same page. The required columns are:
+
+```csv
+employee_code,pay_date,period_start,period_end,pay_frequency,hours_worked,bonus_taxable,override_403b
+EMP001,2026-05-31,2026-05-16,2026-05-31,semimonthly,80.00,0.00,
+```
+
+The upload still uses the payroll journal entry system. Each imported row must balance before it is posted.
 
 ## Render port configuration
 

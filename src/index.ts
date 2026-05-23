@@ -19,9 +19,11 @@ import {
   listPayrollEntries,
   payrollEmployeesCsv,
   payrollEntriesCsv,
+  payrollImportTemplateCsv,
   payrollTaxReport,
   payrollSummary,
   updatePayrollEmployee,
+  validatePayrollCsvImport,
   validatePayrollEntryForm
 } from "./payroll.ts";
 import { createFund, listFunds, parseStatementOfActivitiesFilters, statementOfActivities } from "./reports.ts";
@@ -70,10 +72,12 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/payroll/reports/employer-taxes.pdf", handler: getPayrollTaxReportPdf },
   { method: "GET", path: "/payroll/export/employees.csv", handler: getPayrollEmployeesCsv },
   { method: "GET", path: "/payroll/export/payroll.csv", handler: getPayrollEntriesCsv },
+  { method: "GET", path: "/payroll/import/template.csv", handler: getPayrollImportTemplateCsv },
   { method: "POST", path: "/payroll/employees", handler: postPayrollEmployees },
   { method: "POST", path: "/payroll/employees/update", handler: postPayrollEmployeeUpdate },
   { method: "POST", path: "/payroll/employees/delete", handler: postPayrollEmployeeDelete },
   { method: "POST", path: "/payroll/entries", handler: postPayrollEntries },
+  { method: "POST", path: "/payroll/import/payroll.csv", handler: postPayrollCsvImport },
   { method: "GET", path: "/settings", handler: getSettings },
   { method: "POST", path: "/settings/profile", handler: postSettingsProfile },
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
@@ -360,6 +364,45 @@ async function postPayrollEntries(request: Request, env: Env): Promise<Response>
   return redirect("/payroll");
 }
 
+async function postPayrollCsvImport(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const file = form.get("payrollCsv");
+  if (!(file instanceof File) || file.size === 0) {
+    return payrollPageWithErrors(env, context, { payroll: "Choose a payroll CSV file to upload." });
+  }
+  if (file.size > 128_000) {
+    return payrollPageWithErrors(env, context, { payroll: "Payroll CSV file must be 128 KB or smaller." });
+  }
+
+  const [employees, accounts, csvText] = await Promise.all([
+    listPayrollEmployees(env, context.organization.id),
+    listAccounts(env, context.organization.id),
+    file.text()
+  ]);
+  const result = validatePayrollCsvImport(csvText, form, employees, accounts, context.organization.id, context.user.id);
+  if (!result.ok) return payrollPageWithErrors(env, context, result.errors);
+
+  for (const item of result.data) {
+    const entry = await createPayrollEntry(env, item.draft, employees);
+    if (!entry.ok) {
+      return payrollPageWithErrors(env, context, {
+        payroll: `Row ${item.rowNumber} could not be created. ${Object.values(entry.errors).join(" ")}`
+      });
+    }
+  }
+
+  return redirect("/payroll");
+}
+
 async function postPayrollEmployeeUpdate(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
@@ -436,6 +479,16 @@ async function getPayrollEntriesCsv(request: Request, env: Env): Promise<Respons
 
   const csv = payrollEntriesCsv(await listPayrollEntryExportRows(env, context.organization.id));
   return csvResponse(csv, "payroll-entries.csv");
+}
+
+async function getPayrollImportTemplateCsv(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  return csvResponse(payrollImportTemplateCsv(), "payroll-import-template.csv");
 }
 
 async function getPayrollTaxReportPdf(request: Request, env: Env): Promise<Response> {

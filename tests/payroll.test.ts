@@ -12,9 +12,11 @@ import {
   getPayrollPayStatement,
   payrollEmployeesCsv,
   payrollEntriesCsv,
+  payrollImportTemplateCsv,
   payrollTaxReport,
   periodsForFrequency,
   updatePayrollEmployee,
+  validatePayrollCsvImport,
   validatePayrollEmployeeForm,
   validatePayrollEmployeeUpdateForm,
   validatePayrollEntryForm,
@@ -396,6 +398,51 @@ test("exports payroll entries as CSV", () => {
   assert.match(csv, /je_1/);
 });
 
+test("provides a payroll import CSV template", () => {
+  const csv = payrollImportTemplateCsv();
+
+  assert.match(csv, /^employee_code,pay_date,period_start/);
+  assert.match(csv, /EMP001/);
+});
+
+test("validates payroll CSV import rows into payroll drafts", () => {
+  const csv = [
+    "employee_code,pay_date,period_start,period_end,pay_frequency,hours_worked,bonus_taxable,override_403b",
+    "EMP001,2026-04-30,2026-04-16,2026-04-30,semimonthly,80.00,25.00,"
+  ].join("\n");
+
+  const result = validatePayrollCsvImport(csv, payrollAccountForm(), [employee], accounts, "org_1", "usr_1");
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.data.length, 1);
+    assert.equal(result.data[0].rowNumber, 2);
+    assert.equal(result.data[0].draft.employeeId, "pe_1");
+    assert.equal(result.data[0].draft.hoursWorkedHundredths, 8000);
+    assert.equal(result.data[0].draft.bonusTaxableCents, 2500);
+    assert.equal(result.data[0].draft.journalAccounts.cashAccountId, "acct_cash");
+  }
+});
+
+test("rejects payroll CSV rows for unknown employees", () => {
+  const csv = [
+    "employee_code,pay_date,period_start,period_end,pay_frequency,hours_worked",
+    "EMP404,2026-04-30,2026-04-16,2026-04-30,semimonthly,80.00"
+  ].join("\n");
+
+  const result = validatePayrollCsvImport(csv, payrollAccountForm(), [employee], accounts, "org_1", "usr_1");
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.errors.payroll, /Row 2/);
+});
+
+test("rejects payroll CSV files without required headers", () => {
+  const result = validatePayrollCsvImport("employee_code,pay_date\nEMP001,2026-04-30\n", payrollAccountForm(), [employee], accounts, "org_1", "usr_1");
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.match(result.errors.payroll, /missing these columns/);
+});
+
 function employeeForm(): FormData {
   const form = new FormData();
   form.set("employeeCode", "emp002");
@@ -418,6 +465,16 @@ function payrollEntryForm(): FormData {
   form.set("hoursWorked", "86.60");
   form.set("bonusTaxable", "456.00");
   form.set("override403b", "250.00");
+  form.set("cashAccountId", "acct_cash");
+  form.set("wageExpenseAccountId", "acct_wages");
+  form.set("payrollTaxExpenseAccountId", "acct_payroll_tax");
+  form.set("withholdingLiabilityAccountId", "acct_tax_liability");
+  form.set("retirementLiabilityAccountId", "acct_403b");
+  return form;
+}
+
+function payrollAccountForm(): FormData {
+  const form = new FormData();
   form.set("cashAccountId", "acct_cash");
   form.set("wageExpenseAccountId", "acct_wages");
   form.set("payrollTaxExpenseAccountId", "acct_payroll_tax");

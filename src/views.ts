@@ -312,7 +312,47 @@ export function payrollPage(
         <div class="export-actions">
           <a class="button-like small-button" href="/payroll/export/employees.csv">Export employees CSV</a>
           <a class="button-like small-button" href="/payroll/export/payroll.csv">Export payroll CSV</a>
+          <a class="button-like small-button" href="/payroll/import/template.csv">Download import template</a>
         </div>
+        <form method="post" action="/payroll/import/payroll.csv" enctype="multipart/form-data" class="grid-form report-filter">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <label>Payroll CSV
+            <input name="payrollCsv" type="file" accept=".csv,text/csv" required>
+          </label>
+          <label>Bank or cash account
+            <select name="cashAccountId">
+              ${accountOptions(cashAccounts, "No active asset or liability accounts")}
+            </select>
+            ${errorText(errors.cashAccountId)}
+          </label>
+          <label>Wage expense account
+            <select name="wageExpenseAccountId">
+              ${accountOptions(expenseAccounts, "No active expense accounts")}
+            </select>
+            ${errorText(errors.wageExpenseAccountId)}
+          </label>
+          <label>Payroll tax expense account
+            <select name="payrollTaxExpenseAccountId">
+              ${accountOptions(expenseAccounts, "No active expense accounts")}
+            </select>
+            ${errorText(errors.payrollTaxExpenseAccountId)}
+          </label>
+          <label>Payroll tax liability account
+            <select name="withholdingLiabilityAccountId">
+              ${accountOptions(liabilityAccounts, "No active liability accounts")}
+            </select>
+            ${errorText(errors.withholdingLiabilityAccountId)}
+          </label>
+          <label>403(b) liability account
+            <select name="retirementLiabilityAccountId">
+              ${accountOptions(liabilityAccounts, "No active liability accounts")}
+            </select>
+            ${errorText(errors.retirementLiabilityAccountId)}
+          </label>
+          <div class="form-actions">
+            <button type="submit">Upload payroll CSV</button>
+          </div>
+        </form>
         <h2>Employees</h2>
         <div class="table-wrap">
           <table>

@@ -85,6 +85,11 @@ export type PayrollJournalAccounts = {
   retirementLiabilityAccountId: string;
 };
 
+export type PayrollCsvDraft = {
+  rowNumber: number;
+  draft: PayrollEntryDraft;
+};
+
 export type PayrollCalculationInput = PayrollEntryDraft & {
   employee: PayrollEmployee;
   priorYtdGrossCents: number;
@@ -801,6 +806,88 @@ export function payrollEntriesCsv(entries: PayrollEntryExportRow[]): string {
   );
 }
 
+export function payrollImportTemplateCsv(): string {
+  return toCsv(
+    [
+      "employee_code",
+      "pay_date",
+      "period_start",
+      "period_end",
+      "pay_frequency",
+      "hours_worked",
+      "bonus_taxable",
+      "override_403b"
+    ],
+    [["EMP001", "2026-05-31", "2026-05-16", "2026-05-31", "semimonthly", "80.00", "0.00", ""]]
+  );
+}
+
+export function validatePayrollCsvImport(
+  csvText: string,
+  accountForm: FormData,
+  employees: PayrollEmployee[],
+  accounts: ChartAccount[],
+  organizationId: string,
+  createdByUserId: string
+): ValidationResult<PayrollCsvDraft[]> {
+  const rows = parseCsvRows(csvText);
+  const errors: string[] = [];
+
+  if (rows.length < 2) {
+    return { ok: false, errors: { payroll: "Upload a CSV file with a header row and at least one payroll row." } };
+  }
+
+  const headers = rows[0].map(normalizeCsvHeader);
+  const requiredHeaders = ["employee_code", "pay_date", "period_start", "period_end", "pay_frequency", "hours_worked"];
+  const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    return { ok: false, errors: { payroll: `CSV is missing these columns: ${missingHeaders.join(", ")}.` } };
+  }
+
+  const dataRows = rows.slice(1).filter((row) => row.some((cell) => cell.trim() !== ""));
+  if (dataRows.length === 0) {
+    return { ok: false, errors: { payroll: "Upload a CSV file with at least one payroll row." } };
+  }
+  if (dataRows.length > 100) {
+    return { ok: false, errors: { payroll: "Upload 100 payroll rows or fewer at a time." } };
+  }
+
+  const drafts: PayrollCsvDraft[] = [];
+  const employeeByCode = new Map(employees.map((employee) => [employee.employee_code.toUpperCase(), employee]));
+
+  dataRows.forEach((row, index) => {
+    const rowNumber = index + 2;
+    const rowData = csvRowToRecord(headers, row);
+    const employeeCode = (rowData.employee_code ?? "").trim().toUpperCase();
+    const employee = employeeByCode.get(employeeCode);
+    if (!employee || employee.status !== "active") {
+      errors.push(`Row ${rowNumber}: employee_code must match an active employee.`);
+      return;
+    }
+
+    const rowForm = new FormData();
+    rowForm.set("employeeId", employee.id);
+    rowForm.set("payDate", rowData.pay_date ?? "");
+    rowForm.set("periodStart", rowData.period_start ?? "");
+    rowForm.set("periodEnd", rowData.period_end ?? "");
+    rowForm.set("payFrequency", rowData.pay_frequency ?? "");
+    rowForm.set("hoursWorked", rowData.hours_worked ?? "");
+    rowForm.set("bonusTaxable", rowData.bonus_taxable ?? "");
+    rowForm.set("override403b", rowData.override_403b ?? "");
+    copyPayrollAccountFields(accountForm, rowForm);
+
+    const result = validatePayrollEntryForm(rowForm, employees, accounts, organizationId, createdByUserId);
+    if (!result.ok) {
+      errors.push(`Row ${rowNumber}: ${Object.values(result.errors).join(" ")}`);
+      return;
+    }
+
+    drafts.push({ rowNumber, draft: result.data });
+  });
+
+  return errors.length > 0 ? { ok: false, errors: { payroll: errors.join(" ") } } : { ok: true, data: drafts };
+}
+
 export function validatePayrollEntryForm(
   form: FormData,
   employees: PayrollEmployee[],
@@ -1268,6 +1355,75 @@ function toCsv(headers: string[], rows: string[][]): string {
 
 function csvCell(value: string): string {
   return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+function parseCsvRows(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const nextChar = csvText[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      if (char === "\r" && nextChar === "\n") index += 1;
+      continue;
+    }
+
+    cell += char;
+  }
+
+  if (cell !== "" || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  return rows.filter((candidate) => candidate.some((value) => value.trim() !== ""));
+}
+
+function normalizeCsvHeader(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+function csvRowToRecord(headers: string[], row: string[]): Record<string, string> {
+  return headers.reduce<Record<string, string>>((record, header, index) => {
+    record[header] = row[index]?.trim() ?? "";
+    return record;
+  }, {});
+}
+
+function copyPayrollAccountFields(source: FormData, target: FormData): void {
+  [
+    "cashAccountId",
+    "wageExpenseAccountId",
+    "payrollTaxExpenseAccountId",
+    "withholdingLiabilityAccountId",
+    "retirementLiabilityAccountId"
+  ].forEach((fieldName) => {
+    target.set(fieldName, stringValue(source, fieldName));
+  });
 }
 
 function isIsoDate(value: string): boolean {
