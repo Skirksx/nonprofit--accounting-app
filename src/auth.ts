@@ -69,6 +69,7 @@ export async function requireAuth(request: Request, env: Env): Promise<AuthConte
       organizations.name AS organization_name,
       organizations.fiscal_year_start_month,
       organizations.base_currency,
+      COALESCE(organizations.organization_profile, 'church') AS organization_profile,
       organizations.logo_data_url,
       organization_members.role,
       sessions.csrf_token
@@ -89,6 +90,7 @@ export async function requireAuth(request: Request, env: Env): Promise<AuthConte
       organization_name: string;
       fiscal_year_start_month: number;
       base_currency: string;
+      organization_profile: "church" | "rotary";
       logo_data_url: string | null;
       role: Role;
       csrf_token: string;
@@ -107,6 +109,7 @@ export async function requireAuth(request: Request, env: Env): Promise<AuthConte
       name: context.organization_name,
       fiscal_year_start_month: context.fiscal_year_start_month,
       base_currency: context.base_currency,
+      organization_profile: context.organization_profile,
       logo_data_url: context.logo_data_url
     },
     role: context.role,

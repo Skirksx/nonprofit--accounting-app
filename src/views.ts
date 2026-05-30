@@ -19,12 +19,15 @@ export function layout(options: {
   body: string;
   context?: AuthContext;
 }): Response {
+  const payrollLink = options.context?.organization.organization_profile === "church"
+    ? `<a href="/payroll">Payroll</a>`
+    : "";
   const navigation = options.context
     ? `<nav class="nav">
         <a href="/dashboard">Dashboard</a>
         <a href="/transactions/new">New transaction</a>
         <a href="/journal-entries/new">Journal entries</a>
-        <a href="/payroll">Payroll</a>
+        ${payrollLink}
         <a href="/funds">Funds</a>
         <a href="/accounts">Chart of accounts</a>
         <a href="/reports/statement-of-activities">Reports</a>
@@ -86,6 +89,13 @@ export function setupPage(appName: string, errors: Record<string, string> = {}):
       </section>
       <form method="post" action="/setup" class="grid-form">
         ${field("Organization name", "organizationName", "text", errors.organizationName, "Community Arts Fund")}
+        <label>Organization type
+          <select name="organizationProfile">
+            <option value="church">Church</option>
+            <option value="rotary">Rotary / service club</option>
+          </select>
+          ${errorText(errors.organizationProfile)}
+        </label>
         <label>Fiscal year starts
           <select name="fiscalYearStartMonth">
             ${monthOptions()}
@@ -107,6 +117,7 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
   accountCount: number;
   activeAccountCount: number;
 }): Response {
+  const profile = organizationProfileContent(context);
   return layout({
     title: "Dashboard",
     appName,
@@ -114,8 +125,8 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
     body: `<section class="page-heading dashboard-heading">
         ${context.organization.logo_data_url ? `<img class="org-logo" src="${escapeHtml(context.organization.logo_data_url)}" alt="${escapeHtml(context.organization.name)} logo">` : ""}
         <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
-        <h1>Accounting dashboard</h1>
-        <p class="muted">Welcome back, ${escapeHtml(context.user.name)}. Your role is ${escapeHtml(context.role)}.</p>
+        <h1>${escapeHtml(profile.heading)}</h1>
+        <p class="muted">${escapeHtml(profile.description)} Welcome back, ${escapeHtml(context.user.name)}. Your role is ${escapeHtml(context.role)}.</p>
       </section>
       <section class="metric-grid">
         <article class="metric"><span>Total accounts</span><strong>${stats.accountCount}</strong></article>
@@ -123,12 +134,11 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
         <article class="metric"><span>Currency</span><strong>${escapeHtml(context.organization.base_currency)}</strong></article>
       </section>
       <section class="content-band">
-        <h2>Foundation modules</h2>
+        <h2>${escapeHtml(profile.moduleTitle)}</h2>
         <div class="task-list">
-          <a href="/funds">Funds and restrictions</a>
+          ${profile.tasks.map((task) => `<a href="${escapeHtml(task.href)}">${escapeHtml(task.label)}</a>`).join("")}
           <a href="/journal-entries/new">Journal entries</a>
           <a href="/transactions/new">Income and expenses</a>
-          <a href="/payroll">Payroll</a>
           <a href="/reports/statement-of-activities">Financial reports</a>
         </div>
       </section>`
@@ -1219,6 +1229,37 @@ function selected(current: string, value: string): string {
 
 function checked(value: number): string {
   return value === 1 ? " checked" : "";
+}
+
+function organizationProfileContent(context: AuthContext): {
+  heading: string;
+  description: string;
+  moduleTitle: string;
+  tasks: Array<{ href: string; label: string }>;
+} {
+  if (context.organization.organization_profile === "rotary") {
+    return {
+      heading: "Rotary accounting dashboard",
+      description: "Track dues, event income, fundraisers, grants, service projects, and club expenses.",
+      moduleTitle: "Rotary modules",
+      tasks: [
+        { href: "/funds", label: "Service projects and grants" },
+        { href: "/transactions/new", label: "Dues and event income" },
+        { href: "/reports/budget-vs-actual", label: "Project budget vs actual" }
+      ]
+    };
+  }
+
+  return {
+    heading: "Church accounting dashboard",
+    description: "Track tithes, offerings, restricted gifts, ministry funds, payroll, and church expenses.",
+    moduleTitle: "Church modules",
+    tasks: [
+      { href: "/funds", label: "Funds, ministries, and restrictions" },
+      { href: "/payroll", label: "Payroll" },
+      { href: "/reports/statement-of-activities", label: "Statement of activities" }
+    ]
+  };
 }
 
 function escapeHtml(value: string): string {

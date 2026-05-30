@@ -5,6 +5,7 @@ CREATE TABLE organizations (
   name TEXT NOT NULL,
   fiscal_year_start_month INTEGER NOT NULL DEFAULT 1 CHECK (fiscal_year_start_month BETWEEN 1 AND 12),
   base_currency TEXT NOT NULL DEFAULT 'USD',
+  organization_profile TEXT NOT NULL DEFAULT 'church' CHECK (organization_profile IN ('church', 'rotary')),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

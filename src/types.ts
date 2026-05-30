@@ -13,6 +13,8 @@ export type AccountStatus = "active" | "inactive";
 
 export type JournalEntryStatus = "draft" | "posted" | "void";
 
+export type OrganizationProfile = "church" | "rotary";
+
 export type User = {
   id: string;
   email: string;
@@ -24,6 +26,7 @@ export type Organization = {
   name: string;
   fiscal_year_start_month: number;
   base_currency: string;
+  organization_profile: OrganizationProfile;
   logo_data_url: string | null;
 };
 

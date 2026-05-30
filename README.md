@@ -6,6 +6,7 @@ A low-cost nonprofit accounting foundation built with TypeScript, Cloudflare Wor
 
 - Login page with D1-backed sessions
 - First-run organization setup page
+- Organization type setup for Church or Rotary / service club layouts
 - Dashboard page
 - Chart of accounts page
 - Chart of accounts module with account number, account name, account type, normal balance, status, and organization ID
@@ -207,6 +208,10 @@ npm run db:migrate:remote
 ```
 
 Render/Neon creates the budget table automatically when the server starts.
+
+## Church vs Rotary layouts
+
+During first setup, choose either Church or Rotary / service club. Church workspaces show payroll and church-focused dashboard shortcuts. Rotary workspaces hide payroll and use service-club wording for dues, events, fundraisers, grants, and service projects.
 
 ## Next build phases
 

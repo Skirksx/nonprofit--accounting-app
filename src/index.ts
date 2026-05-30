@@ -170,8 +170,8 @@ async function postSetup(request: Request, env: Env): Promise<Response> {
 
   const batch = [
     env.DB.prepare(
-      "INSERT INTO organizations (id, name, fiscal_year_start_month, base_currency) VALUES (?, ?, ?, ?)"
-    ).bind(organizationId, result.data.organizationName, result.data.fiscalYearStartMonth, "USD"),
+      "INSERT INTO organizations (id, name, fiscal_year_start_month, base_currency, organization_profile) VALUES (?, ?, ?, ?, ?)"
+    ).bind(organizationId, result.data.organizationName, result.data.fiscalYearStartMonth, "USD", result.data.organizationProfile),
     env.DB.prepare(
       "INSERT INTO users (id, email, name, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, ?, ?, ?)"
     ).bind(userId, result.data.email, result.data.name, password.hash, password.salt, password.iterations),
@@ -322,6 +322,7 @@ async function postJournalEntries(request: Request, env: Env): Promise<Response>
 async function getPayroll(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const year = new Date().getFullYear();
   const [employees, accounts, entries, summary] = await Promise.all([
@@ -337,6 +338,7 @@ async function getPayroll(request: Request, env: Env): Promise<Response> {
 async function postPayrollEmployees(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "admin");
   if (roleError) return roleError;
@@ -363,6 +365,7 @@ async function postPayrollEmployees(request: Request, env: Env): Promise<Respons
 async function postPayrollEntries(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -387,6 +390,7 @@ async function postPayrollEntries(request: Request, env: Env): Promise<Response>
 async function postPayrollCsvImport(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -426,6 +430,7 @@ async function postPayrollCsvImport(request: Request, env: Env): Promise<Respons
 async function postPayrollEmployeeUpdate(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "admin");
   if (roleError) return roleError;
@@ -443,6 +448,7 @@ async function postPayrollEmployeeUpdate(request: Request, env: Env): Promise<Re
 async function postPayrollEmployeeDelete(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "admin");
   if (roleError) return roleError;
@@ -458,6 +464,7 @@ async function postPayrollEmployeeDelete(request: Request, env: Env): Promise<Re
 async function getPayrollPayStatementPdf(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -482,6 +489,7 @@ async function getPayrollPayStatementPdf(request: Request, env: Env): Promise<Re
 async function getPayrollEmployeesCsv(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -493,6 +501,7 @@ async function getPayrollEmployeesCsv(request: Request, env: Env): Promise<Respo
 async function getPayrollEntriesCsv(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -504,6 +513,7 @@ async function getPayrollEntriesCsv(request: Request, env: Env): Promise<Respons
 async function getPayrollImportTemplateCsv(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;
@@ -514,6 +524,7 @@ async function getPayrollImportTemplateCsv(request: Request, env: Env): Promise<
 async function getPayrollTaxReportPdf(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
+  if (context.organization.organization_profile === "rotary") return redirect("/dashboard");
 
   const roleError = requireRole(context, "accountant");
   if (roleError) return roleError;

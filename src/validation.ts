@@ -1,4 +1,4 @@
-import type { AccountStatus, AccountType, NormalBalance } from "./types.ts";
+import type { AccountStatus, AccountType, NormalBalance, OrganizationProfile } from "./types.ts";
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
@@ -17,12 +17,14 @@ export function validateLogin(form: FormData): ValidationResult<{ email: string;
 
 export function validateSetup(form: FormData): ValidationResult<{
   organizationName: string;
+  organizationProfile: OrganizationProfile;
   fiscalYearStartMonth: number;
   name: string;
   email: string;
   password: string;
 }> {
   const organizationName = stringValue(form, "organizationName");
+  const organizationProfile = stringValue(form, "organizationProfile") as OrganizationProfile;
   const fiscalYearStartMonth = Number(stringValue(form, "fiscalYearStartMonth"));
   const name = stringValue(form, "name");
   const email = stringValue(form, "email").toLowerCase();
@@ -30,6 +32,9 @@ export function validateSetup(form: FormData): ValidationResult<{
   const errors: Record<string, string> = {};
 
   if (organizationName.length < 2) errors.organizationName = "Organization name is required.";
+  if (!["church", "rotary"].includes(organizationProfile)) {
+    errors.organizationProfile = "Choose church or Rotary.";
+  }
   if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) {
     errors.fiscalYearStartMonth = "Choose a valid fiscal year start month.";
   }
@@ -37,7 +42,7 @@ export function validateSetup(form: FormData): ValidationResult<{
   if (!isEmail(email)) errors.email = "Enter a valid email address.";
   if (password.length < 12) errors.password = "Use at least 12 characters for the owner password.";
 
-  return finish(errors, { organizationName, fiscalYearStartMonth, name, email, password });
+  return finish(errors, { organizationName, organizationProfile, fiscalYearStartMonth, name, email, password });
 }
 
 export function validateAccount(form: FormData): ValidationResult<{

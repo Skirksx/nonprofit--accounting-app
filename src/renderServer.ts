@@ -124,6 +124,7 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
       name TEXT NOT NULL,
       fiscal_year_start_month INTEGER NOT NULL DEFAULT 1 CHECK (fiscal_year_start_month BETWEEN 1 AND 12),
       base_currency TEXT NOT NULL DEFAULT 'USD',
+      organization_profile TEXT NOT NULL DEFAULT 'church' CHECK (organization_profile IN ('church', 'rotary')),
       logo_data_url TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -274,6 +275,12 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  try {
+    await pool.query("ALTER TABLE organizations ADD COLUMN organization_profile TEXT NOT NULL DEFAULT 'church' CHECK (organization_profile IN ('church', 'rotary'))");
+  } catch (error) {
+    if (!String(error).includes("already exists")) throw error;
+  }
 }
 
 export function createRenderServer(env: Env) {
