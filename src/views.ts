@@ -1,6 +1,6 @@
 import type { ChartAccount } from "./accounts.ts";
 import type { UserOrganization } from "./auth.ts";
-import type { JournalEntrySummary } from "./journalEntries.ts";
+import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
   BalanceSheetReport,
@@ -729,10 +729,11 @@ export function journalEntryPage(
             <td>${formatStatus(entry.status)}</td>
             <td class="amount">${formatMoney(entry.total_debit_cents)}</td>
             <td class="amount">${formatMoney(entry.total_credit_cents)}</td>
+            <td><a class="button-like small-button" href="/journal-entries/edit?id=${encodeURIComponent(entry.id)}">Edit</a></td>
           </tr>`
         )
         .join("")
-    : `<tr><td colspan="6" class="empty">No journal entries yet.</td></tr>`;
+    : `<tr><td colspan="7" class="empty">No journal entries yet.</td></tr>`;
 
   return layout({
     title: "Journal entries",
@@ -758,11 +759,57 @@ export function journalEntryPage(
         <h2>Recent journal entries</h2>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Entry</th><th>Date</th><th>Description</th><th>Status</th><th>Debits</th><th>Credits</th></tr></thead>
+            <thead><tr><th>Entry</th><th>Date</th><th>Description</th><th>Status</th><th>Debits</th><th>Credits</th><th>Actions</th></tr></thead>
             <tbody>${entryRows}</tbody>
           </table>
         </div>
       </section>`
+  });
+}
+
+export function journalEntryEditPage(
+  appName: string,
+  context: AuthContext,
+  accounts: ChartAccount[],
+  funds: Fund[],
+  entry: JournalEntryDetail,
+  error?: string
+): Response {
+  const editableLines = entry.lines.length > 0 ? entry.lines : emptyJournalLines();
+  const totalDebit = editableLines.reduce((sum, line) => sum + line.debitAmountCents, 0);
+  const totalCredit = editableLines.reduce((sum, line) => sum + line.creditAmountCents, 0);
+
+  return layout({
+    title: `Edit ${entry.entry_number}`,
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Edit journal entry</h1>
+        <p class="muted">Change the account, fund, description, or amount. Debits and credits must still match before saving.</p>
+      </section>
+      <form method="post" action="/journal-entries/update" class="grid-form">
+        <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+        <input type="hidden" name="entryId" value="${escapeHtml(entry.id)}">
+        <input type="hidden" name="lineCount" value="${editableLines.length}">
+        ${error ? `<p class="alert">${escapeHtml(error)}</p>` : ""}
+        ${fieldWithValue("Date", "entryDate", "date", undefined, entry.entry_date)}
+        ${fieldWithValue("Description", "description", "text", undefined, entry.description, "Payroll accrual")}
+        ${editableLines.map((line, index) => journalEditLineFields(index + 1, line, accounts, funds)).join("")}
+        <div class="report-total">
+          <span>Total debits</span>
+          <strong>${formatMoney(totalDebit)}</strong>
+        </div>
+        <div class="report-total">
+          <span>Total credits</span>
+          <strong>${formatMoney(totalCredit)}</strong>
+        </div>
+        <div class="form-actions">
+          <a href="/journal-entries/new">Back</a>
+          <button type="submit">Save changes</button>
+          <button class="danger-button" type="submit" formaction="/journal-entries/delete">Delete entry</button>
+        </div>
+      </form>`
   });
 }
 
@@ -1173,6 +1220,55 @@ function journalLineFields(lineNumber: number, accounts: ChartAccount[], funds: 
       <input name="line${lineNumber}Credit" type="number" min="0" step="0.01" placeholder="0.00">
     </label>
   </fieldset>`;
+}
+
+function journalEditLineFields(lineNumber: number, line: JournalEntryLineRecord, accounts: ChartAccount[], funds: Fund[]): string {
+  return `<fieldset class="line-set">
+    <legend>Line ${lineNumber}</legend>
+    <label>Account
+      <select name="line${lineNumber}AccountId">
+        ${accountOptions(accounts, "No active accounts", line.accountId)}
+      </select>
+    </label>
+    <label>Fund
+      <select name="line${lineNumber}FundId">
+        <option value="">No fund</option>
+        ${fundOptions(funds, line.fundId ?? "")}
+      </select>
+    </label>
+    <label>Description
+      <input name="line${lineNumber}Description" type="text" value="${escapeHtml(line.description ?? "")}">
+    </label>
+    <label>Debit
+      <input name="line${lineNumber}Debit" type="number" min="0" step="0.01" value="${line.debitAmountCents > 0 ? centsInputValue(line.debitAmountCents) : ""}" placeholder="0.00">
+    </label>
+    <label>Credit
+      <input name="line${lineNumber}Credit" type="number" min="0" step="0.01" value="${line.creditAmountCents > 0 ? centsInputValue(line.creditAmountCents) : ""}" placeholder="0.00">
+    </label>
+  </fieldset>`;
+}
+
+function emptyJournalLines(): JournalEntryLineRecord[] {
+  return [
+    {
+      id: "line_1",
+      line_number: 1,
+      accountId: "",
+      fundId: undefined,
+      description: "",
+      debitAmountCents: 0,
+      creditAmountCents: 0
+    },
+    {
+      id: "line_2",
+      line_number: 2,
+      accountId: "",
+      fundId: undefined,
+      description: "",
+      debitAmountCents: 0,
+      creditAmountCents: 0
+    }
+  ];
 }
 
 function fundOptions(funds: Fund[], selectedFundId = ""): string {

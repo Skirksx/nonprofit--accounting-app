@@ -39,6 +39,15 @@ export type JournalEntrySummary = JournalEntryHeader & {
   total_credit_cents: number;
 };
 
+export type JournalEntryLineRecord = JournalEntryLineInput & {
+  id: string;
+  line_number: number;
+};
+
+export type JournalEntryDetail = JournalEntryHeader & {
+  lines: JournalEntryLineRecord[];
+};
+
 export type JournalEntryValidationResult =
   | { ok: true; totals: JournalEntryTotals }
   | { ok: false; errors: Record<string, string>; totals: JournalEntryTotals };
@@ -220,7 +229,7 @@ export async function listJournalEntries(env: Env, organizationId: string): Prom
       COALESCE(SUM(journal_entry_lines.credit_amount_cents), 0) AS total_credit_cents
      FROM journal_entries
      LEFT JOIN journal_entry_lines ON journal_entry_lines.journal_entry_id = journal_entries.id
-     WHERE journal_entries.organization_id = ?
+     WHERE journal_entries.organization_id = ? AND journal_entries.status != 'void'
      GROUP BY journal_entries.id
      ORDER BY journal_entries.entry_date DESC, journal_entries.entry_number DESC
      LIMIT 50`
@@ -229,6 +238,89 @@ export async function listJournalEntries(env: Env, organizationId: string): Prom
     .all<JournalEntrySummary>();
 
   return result.results ?? [];
+}
+
+export async function getJournalEntryDetail(env: Env, organizationId: string, entryId: string): Promise<JournalEntryDetail | null> {
+  const header = await env.DB.prepare(
+    `SELECT id, organization_id, entry_number, entry_date, description, status, created_by_user_id, posted_at
+     FROM journal_entries
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(organizationId, entryId)
+    .first<JournalEntryHeader>();
+
+  if (!header) return null;
+
+  const lines = await env.DB.prepare(
+    `SELECT
+      id,
+      line_number,
+      account_id AS accountId,
+      fund_id AS fundId,
+      description,
+      debit_amount_cents AS debitAmountCents,
+      credit_amount_cents AS creditAmountCents
+     FROM journal_entry_lines
+     WHERE organization_id = ? AND journal_entry_id = ?
+     ORDER BY line_number ASC`
+  )
+    .bind(organizationId, entryId)
+    .all<JournalEntryLineRecord>();
+
+  return { ...header, lines: lines.results ?? [] };
+}
+
+export async function updateJournalEntry(env: Env, entryId: string, input: JournalEntryInput): Promise<void> {
+  const validation = validateJournalEntry(input, { requireBalanced: true });
+  if (!validation.ok) throw new JournalEntryValidationError(validation.errors);
+
+  const statements = [
+    env.DB.prepare(
+      `UPDATE journal_entries
+       SET entry_date = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE organization_id = ? AND id = ? AND status != 'void'`
+    ).bind(input.entryDate, input.description.trim(), input.organizationId, entryId),
+    env.DB.prepare("DELETE FROM journal_entry_lines WHERE organization_id = ? AND journal_entry_id = ?")
+      .bind(input.organizationId, entryId),
+    ...input.lines.map((line, index) =>
+      env.DB.prepare(
+        `INSERT INTO journal_entry_lines (
+          id,
+          journal_entry_id,
+          organization_id,
+          account_id,
+          fund_id,
+          line_number,
+          description,
+          debit_amount_cents,
+          credit_amount_cents
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        randomId("jel"),
+        entryId,
+        input.organizationId,
+        line.accountId,
+        line.fundId ?? null,
+        index + 1,
+        line.description?.trim() ?? "",
+        line.debitAmountCents,
+        line.creditAmountCents
+      )
+    )
+  ];
+
+  await env.DB.batch(statements);
+}
+
+export async function deleteJournalEntry(env: Env, organizationId: string, entryId: string): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE journal_entries
+     SET status = 'void', updated_at = CURRENT_TIMESTAMP
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(organizationId, entryId)
+    .run();
 }
 
 export function validateManualJournalEntryForm(
@@ -251,6 +343,42 @@ export function validateManualJournalEntryForm(
   };
   const result = validateJournalEntry(input, { requireBalanced: true });
   return result.ok ? { ...result, input } : result;
+}
+
+export function validateJournalEntryEditForm(
+  form: FormData,
+  organizationId: string,
+  createdByUserId: string
+): JournalEntryValidationResult & { input?: JournalEntryInput; entryId?: string } {
+  const entryId = stringValue(form, "entryId");
+  const lineCount = Number(stringValue(form, "lineCount"));
+  const count = Number.isInteger(lineCount) && lineCount > 0 && lineCount <= 50 ? lineCount : 0;
+  const input: JournalEntryInput = {
+    organizationId,
+    createdByUserId,
+    entryDate: stringValue(form, "entryDate"),
+    description: stringValue(form, "description"),
+    lines: Array.from({ length: count }, (_, index) => {
+      const lineNumber = index + 1;
+      return {
+        accountId: stringValue(form, `line${lineNumber}AccountId`),
+        fundId: stringValue(form, `line${lineNumber}FundId`) || undefined,
+        description: stringValue(form, `line${lineNumber}Description`),
+        debitAmountCents: dollarsToCents(stringValue(form, `line${lineNumber}Debit`)),
+        creditAmountCents: dollarsToCents(stringValue(form, `line${lineNumber}Credit`))
+      };
+    })
+  };
+  const result = validateJournalEntry(input, { requireBalanced: true });
+  if (!entryId) {
+    return {
+      ok: false,
+      errors: { ...(!result.ok ? result.errors : {}), entryId: "Journal entry is required." },
+      totals: result.totals,
+      entryId
+    };
+  }
+  return result.ok ? { ...result, input, entryId } : { ...result, entryId };
 }
 
 export class JournalEntryValidationError extends Error {

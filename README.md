@@ -11,7 +11,7 @@ A low-cost nonprofit accounting foundation built with TypeScript, Cloudflare Wor
 - Dashboard page
 - Chart of accounts page
 - Chart of accounts module with account number, account name, account type, normal balance, status, and organization ID
-- Journal entry system with headers, multiple lines, draft/post status, and debit/credit balancing before posting
+- Journal entry system with headers, multiple lines, draft/post status, debit/credit balancing, editing, and delete support
 - Simple income and expense transaction entry screen backed by the journal entry system
 - Statement of Activities report from posted journal lines with date range and fund filters
 - Balance Sheet, Income Statement, Budget, and Budget vs Actual reports for small nonprofit reporting

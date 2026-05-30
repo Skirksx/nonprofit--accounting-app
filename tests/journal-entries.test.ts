@@ -5,7 +5,10 @@ import {
   JournalEntryValidationError,
   calculateJournalTotals,
   createDraftJournalEntry,
+  deleteJournalEntry,
   postJournalEntry,
+  updateJournalEntry,
+  validateJournalEntryEditForm,
   validateJournalEntry
 } from "../src/journalEntries.ts";
 import type { Env } from "../src/types.ts";
@@ -178,6 +181,65 @@ test("does not post an unbalanced draft journal entry", async () => {
   );
 
   assert.equal(env.calls.some((call) => /UPDATE journal_entries/.test(call.sql)), false);
+});
+
+test("validates edited journal entry form lines", () => {
+  const form = new FormData();
+  form.set("entryId", "je_1");
+  form.set("entryDate", "2026-05-22");
+  form.set("description", "Correct deposit coding");
+  form.set("lineCount", "2");
+  form.set("line1AccountId", "acct_cash");
+  form.set("line1FundId", "fund_1");
+  form.set("line1Description", "Cash deposit");
+  form.set("line1Debit", "126.00");
+  form.set("line1Credit", "");
+  form.set("line2AccountId", "acct_revenue");
+  form.set("line2FundId", "fund_1");
+  form.set("line2Description", "Contribution revenue");
+  form.set("line2Debit", "");
+  form.set("line2Credit", "126.00");
+
+  const result = validateJournalEntryEditForm(form, "org_1", "usr_1");
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.entryId, "je_1");
+    assert.equal(result.input.lines[0].fundId, "fund_1");
+    assert.equal(result.input.lines[0].debitAmountCents, 12600);
+  }
+});
+
+test("updates a journal entry by replacing balanced lines", async () => {
+  const env = mockEnv();
+
+  await updateJournalEntry(env, "je_1", {
+    ...balancedInput,
+    entryDate: "2026-05-22",
+    description: "Corrected weekly donations"
+  });
+
+  assert.equal(env.batchCalls.length, 1);
+  assert.equal(env.batchCalls[0].length, 4);
+  assert.match(env.batchCalls[0][0].sql, /UPDATE journal_entries/);
+  assert.match(env.batchCalls[0][1].sql, /DELETE FROM journal_entry_lines/);
+  assert.match(env.batchCalls[0][2].sql, /INSERT INTO journal_entry_lines/);
+  assert.deepEqual(env.batchCalls[0][0].bindings, [
+    "2026-05-22",
+    "Corrected weekly donations",
+    "org_1",
+    "je_1"
+  ]);
+});
+
+test("deletes a journal entry by voiding it for reports", async () => {
+  const env = mockEnv();
+
+  await deleteJournalEntry(env, "org_1", "je_1");
+
+  assert.match(env.calls[0].sql, /UPDATE journal_entries/);
+  assert.match(env.calls[0].sql, /status = 'void'/);
+  assert.deepEqual(env.calls[0].bindings, ["org_1", "je_1"]);
 });
 
 function mockEnv(options: {

@@ -12,8 +12,12 @@ import {
 import { hashPassword, randomId } from "./crypto.ts";
 import {
   createDraftJournalEntry,
+  deleteJournalEntry,
+  getJournalEntryDetail,
   listJournalEntries,
   postJournalEntry,
+  updateJournalEntry,
+  validateJournalEntryEditForm,
   validateManualJournalEntryForm
 } from "./journalEntries.ts";
 import {
@@ -77,6 +81,7 @@ import {
   dashboardPage,
   fundsPage,
   incomeStatementPage,
+  journalEntryEditPage,
   journalEntryPage,
   loginPage,
   organizationAlreadyConfiguredPage,
@@ -110,6 +115,9 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/budget/report.pdf", handler: getBudgetReportPdf },
   { method: "GET", path: "/journal-entries/new", handler: getNewJournalEntry },
   { method: "POST", path: "/journal-entries", handler: postJournalEntries },
+  { method: "GET", path: "/journal-entries/edit", handler: getEditJournalEntry },
+  { method: "POST", path: "/journal-entries/update", handler: postJournalEntryUpdate },
+  { method: "POST", path: "/journal-entries/delete", handler: postJournalEntryDelete },
   { method: "GET", path: "/payroll", handler: getPayroll },
   { method: "GET", path: "/payroll/paystatement", handler: getPayrollPayStatementPdf },
   { method: "GET", path: "/payroll/reports/employer-taxes.pdf", handler: getPayrollTaxReportPdf },
@@ -504,6 +512,73 @@ async function postJournalEntries(request: Request, env: Env): Promise<Response>
 
   const entryId = await createDraftJournalEntry(env, result.input);
   await postJournalEntry(env, context.organization.id, entryId);
+  return redirect("/journal-entries/new");
+}
+
+async function getEditJournalEntry(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const url = new URL(request.url);
+  const entryId = url.searchParams.get("id") ?? "";
+  const [accounts, funds, entry] = await Promise.all([
+    listAccounts(env, context.organization.id),
+    listFunds(env, context.organization.id),
+    entryId ? getJournalEntryDetail(env, context.organization.id, entryId) : Promise.resolve(null)
+  ]);
+
+  if (!entry) return new Response("Journal entry was not found.", { status: 404 });
+  return journalEntryEditPage(env.APP_NAME, context, accounts, funds, entry);
+}
+
+async function postJournalEntryUpdate(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const result = validateJournalEntryEditForm(form, context.organization.id, context.user.id);
+  const [accounts, funds, entry] = await Promise.all([
+    listAccounts(env, context.organization.id),
+    listFunds(env, context.organization.id),
+    result.entryId ? getJournalEntryDetail(env, context.organization.id, result.entryId) : Promise.resolve(null)
+  ]);
+  if (!entry) return new Response("Journal entry was not found.", { status: 404 });
+  if (entry.status === "void") return journalEntryEditPage(env.APP_NAME, context, accounts, funds, entry, "Voided journal entries cannot be edited.");
+  if (!result.ok || !result.input || !result.entryId) {
+    return journalEntryEditPage(env.APP_NAME, context, accounts, funds, entry, "Journal entry must be balanced and complete.");
+  }
+
+  try {
+    await updateJournalEntry(env, result.entryId, result.input);
+  } catch (error) {
+    return journalEntryEditPage(env.APP_NAME, context, accounts, funds, entry, "Journal entry could not be saved.");
+  }
+
+  return redirect("/journal-entries/new");
+}
+
+async function postJournalEntryDelete(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const entryId = String(form.get("entryId") ?? "");
+  if (entryId) await deleteJournalEntry(env, context.organization.id, entryId);
   return redirect("/journal-entries/new");
 }
 
