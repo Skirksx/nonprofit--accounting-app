@@ -216,6 +216,24 @@ During first setup, choose either Church or Rotary / service club. Church worksp
 
 Use the Organizations page to create and switch between separate books under the same user account. For example, one login can open McConnelsville Methodist Church books and Rotary Club books without mixing their accounts, transactions, funds, reports, or payroll settings.
 
+## Rotary workbook import
+
+The repository includes an import prepared from `Rotary Financial Reporting with Budget.xlsx` for Malta & McConnelsville Rotary Club. It creates the Rotary organization for the selected user, adds the chart of accounts, funds, opening balances, bank activity, and the 2025-2026 budget.
+
+If there is more than one user, set `IMPORT_USER_EMAIL` so the app knows which login should own the Rotary books:
+
+```sh
+IMPORT_USER_EMAIL=you@example.com npm run import:rotary
+```
+
+If there is only one user, this is enough:
+
+```sh
+npm run import:rotary
+```
+
+The command uses `DATABASE_URL` from `.env` or your shell. It is safe to run again; journal entries are skipped if they already exist, and the Rotary budget for fiscal year 2026 is replaced from the workbook data.
+
 ## Next build phases
 
 1. Add user invitations and role management.

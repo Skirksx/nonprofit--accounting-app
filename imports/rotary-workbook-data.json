@@ -1,0 +1,2054 @@
+{
+  "organizationName": "Malta & McConnelsville Rotary Club",
+  "organizationProfile": "rotary",
+  "fiscalYearStartMonth": 7,
+  "budgetFiscalYear": 2026,
+  "balanceSheetAsOf": "2026-04-30",
+  "assets": [
+    {
+      "name": "Edward Jones",
+      "amountCents": 2143085
+    },
+    {
+      "name": "CNB Bank Account",
+      "amountCents": 2045381
+    }
+  ],
+  "liabilities": [
+    {
+      "name": "Deferred Expense (Unspent Grants, Tech. Scholarships )",
+      "amountCents": 100000
+    },
+    {
+      "name": "Deferred Expense (Unspent Grants, Front Street Fest)",
+      "amountCents": 486000
+    },
+    {
+      "name": "Deferred Expense (Unspent Grants, Scholarships)",
+      "amountCents": 400000
+    },
+    {
+      "name": "Defferred Expense (Designated Funds per IPS)",
+      "amountCents": 2143085
+    },
+    {
+      "name": "Other Liabilities",
+      "amountCents": 0
+    }
+  ],
+  "netAssetsCents": 1059381,
+  "transactions": [
+    {
+      "sourceRow": 5,
+      "date": "2025-02-26",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 17000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 6,
+      "date": "2025-05-02",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1600,
+      "month": "May"
+    },
+    {
+      "sourceRow": 7,
+      "date": "2025-05-02",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 60900,
+      "month": "May"
+    },
+    {
+      "sourceRow": 8,
+      "date": "2025-07-08",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 98400,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 9,
+      "date": "2025-07-15",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 87300,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 10,
+      "date": "2025-07-29",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 213600,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 11,
+      "date": "2025-12-09",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1600,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 12,
+      "date": "2025-12-16",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1400,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 13,
+      "date": "2025-12-03",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1500,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 14,
+      "date": "2025-11-26",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 21400,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 15,
+      "date": "2025-11-19",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 50900,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 16,
+      "date": "2025-11-04",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 40150,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 17,
+      "date": "2025-10-28",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 474800,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 18,
+      "date": "2025-10-20",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 152500,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 19,
+      "date": "2025-10-08",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 73200,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 20,
+      "date": "2025-09-30",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 38800,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 21,
+      "date": "2025-09-23",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 265300,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 22,
+      "date": "2025-09-12",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 8800,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 23,
+      "date": "2025-07-22",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 204900,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 24,
+      "date": "2025-06-18",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1100,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 25,
+      "date": "2025-06-10",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1700,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 26,
+      "date": "2025-06-05",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 251000,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 27,
+      "date": "2025-05-29",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1700,
+      "month": "May"
+    },
+    {
+      "sourceRow": 28,
+      "date": "2025-05-20",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1600,
+      "month": "May"
+    },
+    {
+      "sourceRow": 29,
+      "date": "2025-05-05",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 11200,
+      "month": "May"
+    },
+    {
+      "sourceRow": 30,
+      "date": "2025-04-01",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 5500,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 31,
+      "date": "2025-03-27",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 160000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 32,
+      "date": "2025-05-14",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1500,
+      "month": "May"
+    },
+    {
+      "sourceRow": 33,
+      "date": "2025-03-18",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 2400,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 34,
+      "date": "2025-03-04",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 3700,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 35,
+      "date": "2025-02-14",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 34800,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 36,
+      "date": "2025-02-11",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 69000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 37,
+      "date": "2025-02-04",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 29000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 38,
+      "date": "2025-01-28",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 25400,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 39,
+      "date": "2025-01-22",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 36800,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 40,
+      "date": "2025-01-21",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 58600,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 41,
+      "date": "2025-10-21",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 3700,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 42,
+      "date": "2025-10-21",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 15000,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 43,
+      "date": "2025-10-14",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 13300,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 44,
+      "date": "2025-09-16",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 3500,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 45,
+      "date": "2025-09-09",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 53200,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 46,
+      "date": "2025-08-26",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 99500,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 47,
+      "date": "2025-08-20",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 27800,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 48,
+      "date": "2025-08-15",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 13500,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 49,
+      "date": "2025-08-13",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 125300,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 50,
+      "date": "2025-08-05",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 109800,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 51,
+      "date": "2025-08-01",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 40000,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 52,
+      "date": "2025-07-01",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 105800,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 53,
+      "date": "2025-06-25",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 21500,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 54,
+      "date": "2025-05-07",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 22000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 55,
+      "date": "2025-04-22",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 22400,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 56,
+      "date": "2025-04-22",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 20000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 57,
+      "date": "2025-04-16",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 12000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 58,
+      "date": "2025-04-08",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 123300,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 59,
+      "date": "2025-03-25",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 25000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 60,
+      "date": "2025-03-12",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 19400,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 61,
+      "date": "2025-02-19",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 1700,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 62,
+      "date": "2025-12-29",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 40400,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 63,
+      "date": "2025-07-16",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT ACCTVERIFY",
+      "category": "Revenue: Other Income",
+      "amountCents": 5,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 64,
+      "date": "2025-07-16",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT ACCTVERIFY",
+      "category": "Revenue: Other Income",
+      "amountCents": 18,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 65,
+      "date": "2025-07-29",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Other Income",
+      "amountCents": 10000,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 66,
+      "date": "2025-08-14",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Other Income",
+      "amountCents": 35000,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 67,
+      "date": "2025-09-11",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 21323661571",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2642,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 68,
+      "date": "2025-11-19",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 10069398821",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2828,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 69,
+      "date": "2025-12-10",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 10126120261",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2877,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 70,
+      "date": "2025-07-15",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 14206808831",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2479,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 71,
+      "date": "2025-06-25",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 21092497461",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2439,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 72,
+      "date": "2025-04-14",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 20901732971",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2786,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 73,
+      "date": "2025-05-15",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 14097565301",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2506,
+      "month": "May"
+    },
+    {
+      "sourceRow": 74,
+      "date": "2025-08-13",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 21241647201",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2555,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 75,
+      "date": "2025-02-11",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 13905635251",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -5942,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 76,
+      "date": "2025-10-14",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 14371491971",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2730,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 77,
+      "date": "2025-07-16",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH DEBIT ACCTVERIFY",
+      "category": "Revenue: Other Income",
+      "amountCents": -23,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 78,
+      "date": "2025-03-17",
+      "description": "AEP OHIO POWER R M M ROTARY CLUB ACH DEBIT BILL PAY 20828811961",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2779,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 79,
+      "date": "2025-05-09",
+      "description": "CHECK 103",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -10000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 80,
+      "date": "2025-03-18",
+      "description": "CHECK 102",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -107666,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 81,
+      "date": "2025-06-23",
+      "description": "CHECK 111",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -27500,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 82,
+      "date": "2025-09-22",
+      "description": "CHECK 130",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -60000,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 83,
+      "date": "2025-08-06",
+      "description": "CHECK 118",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -128977,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 84,
+      "date": "2025-07-22",
+      "description": "CHECK 114",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -92000,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 85,
+      "date": "2025-06-18",
+      "description": "CHECK 109",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -3550,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 86,
+      "date": "2025-06-10",
+      "description": "CHECK 105",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -100000,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 87,
+      "date": "2025-05-19",
+      "description": "CHECK 108",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -100000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 88,
+      "date": "2025-05-19",
+      "description": "CHECK 104",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -100000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 89,
+      "date": "2025-05-29",
+      "description": "CHECK 106",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -100000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 90,
+      "date": "2025-05-28",
+      "description": "CHECK 107",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -100000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 91,
+      "date": "2025-12-08",
+      "description": "CHECK 142",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -50000,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 92,
+      "date": "2025-12-11",
+      "description": "CHECK 140",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -25000,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 93,
+      "date": "2025-09-29",
+      "description": "CHECK 127",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -35000,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 94,
+      "date": "2025-11-18",
+      "description": "CHECK 139",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -25000,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 95,
+      "date": "2025-11-10",
+      "description": "CHECK 138",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -50000,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 96,
+      "date": "2025-11-10",
+      "description": "CHECK 137",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -30816,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 97,
+      "date": "2025-10-15",
+      "description": "CHECK 132",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -48000,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 98,
+      "date": "2025-10-30",
+      "description": "CHECK 136",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -15000,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 99,
+      "date": "2025-06-12",
+      "description": "CHECK 110",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -12500,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 100,
+      "date": "2025-06-24",
+      "description": "CHECK 112",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -28000,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 101,
+      "date": "2025-06-24",
+      "description": "CHECK 113",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -2500,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 102,
+      "date": "2025-08-11",
+      "description": "CHECK 122",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -17500,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 103,
+      "date": "2025-08-05",
+      "description": "CHECK 119",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -15000,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 104,
+      "date": "2025-07-21",
+      "description": "CHECK 117",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -10000,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 105,
+      "date": "2025-08-04",
+      "description": "CHECK 121",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -75000,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 106,
+      "date": "2025-08-18",
+      "description": "CHECK 126",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -110000,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 107,
+      "date": "2025-08-18",
+      "description": "CHECK 123",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -8645,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 108,
+      "date": "2025-09-03",
+      "description": "CHECK 125",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -8000,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 109,
+      "date": "2025-09-15",
+      "description": "CHECK 129",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -50000,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 110,
+      "date": "2025-02-11",
+      "description": "CHECK 100",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -150000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 111,
+      "date": "2025-09-18",
+      "description": "CHECK 128",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -10000,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 112,
+      "date": "2025-10-14",
+      "description": "CHECK 133",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -15408,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 113,
+      "date": "2025-10-21",
+      "description": "CHECK 135",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -70000,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 114,
+      "date": "2025-10-21",
+      "description": "CHECK 134",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -50000,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 115,
+      "date": "2025-02-19",
+      "description": "CHECK 101",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -105825,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 116,
+      "date": "2025-12-24",
+      "description": "CHECK 144",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -30816,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 117,
+      "date": "2025-01-30",
+      "description": "PURCHASE 01-28 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -3600,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 118,
+      "date": "2025-12-18",
+      "description": "PURCHASE 12-16 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 119,
+      "date": "2025-03-12",
+      "description": "PURCHASE 03-11 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8400,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 120,
+      "date": "2025-01-16",
+      "description": "PURCHASE 01-14 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 121,
+      "date": "2025-01-23",
+      "description": "PURCHASE 01-21 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4800,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 122,
+      "date": "2025-03-06",
+      "description": "PURCHASE 03-04 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9600,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 123,
+      "date": "2025-02-13",
+      "description": "PURCHASE 02-11 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 124,
+      "date": "2025-02-27",
+      "description": "PURCHASE 02-25 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4800,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 125,
+      "date": "2025-02-20",
+      "description": "PURCHASE 02-18 CHATTERBOX TAVERN 740-9626310, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7200,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 126,
+      "date": "2025-03-26",
+      "description": "PURCHASE 03-25 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8400,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 127,
+      "date": "2025-03-19",
+      "description": "PURCHASE 03-18 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8400,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 128,
+      "date": "2025-04-23",
+      "description": "PURCHASE 04-22 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 129,
+      "date": "2025-04-09",
+      "description": "PURCHASE 04-08 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7200,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 130,
+      "date": "2025-04-03",
+      "description": "PURCHASE 04-01 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 131,
+      "date": "2025-08-27",
+      "description": "PURCHASE 08-26 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4185,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 132,
+      "date": "2025-08-20",
+      "description": "PURCHASE 08-19 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6975,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 133,
+      "date": "2025-07-17",
+      "description": "PURCHASE 07-15 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6975,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 134,
+      "date": "2025-08-13",
+      "description": "PURCHASE 08-12 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -10400,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 135,
+      "date": "2025-06-12",
+      "description": "PURCHASE 06-10 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 136,
+      "date": "2025-06-25",
+      "description": "PURCHASE 06-24 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -3861,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 137,
+      "date": "2025-05-07",
+      "description": "PURCHASE 05-06 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7200,
+      "month": "May"
+    },
+    {
+      "sourceRow": 138,
+      "date": "2025-04-30",
+      "description": "PURCHASE 04-29 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7200,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 139,
+      "date": "2025-04-16",
+      "description": "PURCHASE 04-15 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7200,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 140,
+      "date": "2025-10-29",
+      "description": "PURCHASE 10-28 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 141,
+      "date": "2025-10-22",
+      "description": "PURCHASE 10-21 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9765,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 142,
+      "date": "2025-10-15",
+      "description": "PURCHASE 10-14 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 143,
+      "date": "2025-10-08",
+      "description": "PURCHASE 10-07 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 144,
+      "date": "2025-11-05",
+      "description": "PURCHASE 11-04 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9765,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 145,
+      "date": "2025-11-19",
+      "description": "PURCHASE 11-18 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 146,
+      "date": "2025-11-26",
+      "description": "PURCHASE 11-25 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -5580,
+      "month": "Nov"
+    },
+    {
+      "sourceRow": 147,
+      "date": "2025-12-03",
+      "description": "PURCHASE 12-02 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 148,
+      "date": "2025-12-10",
+      "description": "PURCHASE 12-09 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Dec"
+    },
+    {
+      "sourceRow": 149,
+      "date": "2025-02-05",
+      "description": "PURCHASE 02-04 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -10080,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 150,
+      "date": "2025-05-21",
+      "description": "PURCHASE 05-20 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8400,
+      "month": "May"
+    },
+    {
+      "sourceRow": 151,
+      "date": "2025-05-28",
+      "description": "PURCHASE 05-27 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4800,
+      "month": "May"
+    },
+    {
+      "sourceRow": 152,
+      "date": "2025-05-14",
+      "description": "PURCHASE 05-13 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "May"
+    },
+    {
+      "sourceRow": 153,
+      "date": "2025-06-05",
+      "description": "PURCHASE 06-03 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4800,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 154,
+      "date": "2025-06-18",
+      "description": "PURCHASE 06-17 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6000,
+      "month": "Jun"
+    },
+    {
+      "sourceRow": 155,
+      "date": "2025-08-06",
+      "description": "PURCHASE 08-05 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6500,
+      "month": "Aug"
+    },
+    {
+      "sourceRow": 156,
+      "date": "2025-07-30",
+      "description": "PURCHASE 07-29 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -8370,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 157,
+      "date": "2025-07-23",
+      "description": "PURCHASE 07-22 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9765,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 158,
+      "date": "2025-07-09",
+      "description": "PURCHASE 07-08 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6975,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 159,
+      "date": "2025-07-09",
+      "description": "PURCHASE 07-08 USPS PO 3847250356 MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Administration (Dues, Supplies, Bank Fees)",
+      "amountCents": -1460,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 160,
+      "date": "2025-07-03",
+      "description": "PURCHASE 07-01 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -7800,
+      "month": "Jul"
+    },
+    {
+      "sourceRow": 161,
+      "date": "2025-09-17",
+      "description": "PURCHASE 09-16 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9765,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 162,
+      "date": "2025-09-10",
+      "description": "PURCHASE 09-09 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -12555,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 163,
+      "date": "2025-09-24",
+      "description": "PURCHASE 09-23 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -6975,
+      "month": "Sep"
+    },
+    {
+      "sourceRow": 164,
+      "date": "2025-10-01",
+      "description": "PURCHASE 09-30 TST*RIVER VALLEY SOCIA Mc Connelsvil, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -9765,
+      "month": "Oct"
+    },
+    {
+      "sourceRow": 165,
+      "date": "2026-01-08",
+      "description": "PURCHASE 01-06 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -4893,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 166,
+      "date": "2026-01-08",
+      "description": "CHECK 143 Christmas In the Village",
+      "category": "Expense: Service Projects",
+      "amountCents": -10000,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 167,
+      "date": "2026-01-08",
+      "description": "CHECK 145 Morgan Athletic Boosters",
+      "category": "Expense: Service Projects",
+      "amountCents": -30000,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 168,
+      "date": "2026-01-09",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 3500,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 169,
+      "date": "2026-01-12",
+      "description": "AEP OHIO POWER S M M ROTARY CLUB ACH DEBIT BILL PAY 14537984711",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2973,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 170,
+      "date": "2026-01-15",
+      "description": "PURCHASE 01-13 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -2369,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 171,
+      "date": "2026-01-22",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 27600,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 172,
+      "date": "2026-01-22",
+      "description": "PURCHASE 01-20 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -4635,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 173,
+      "date": "2026-01-28",
+      "description": "CHECK 146 Rotary International",
+      "category": "Expense: Administration (Dues, Supplies, Bank Fees)",
+      "amountCents": -105866,
+      "month": "Jan"
+    },
+    {
+      "sourceRow": 174,
+      "date": "2026-02-03",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 150400,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 175,
+      "date": "2026-02-05",
+      "description": "PURCHASE 02-03 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -3708,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 176,
+      "date": "2026-02-10",
+      "description": "CHECK 147 KB Trophies and Tees",
+      "category": "Expense: Community Events",
+      "amountCents": -3067,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 177,
+      "date": "2026-02-12",
+      "description": "PURCHASE 02-10 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -5356,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 178,
+      "date": "2026-02-13",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 44500,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 179,
+      "date": "2026-02-17",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 19231,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 180,
+      "date": "2026-02-17",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 7000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 181,
+      "date": "2026-02-17",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 10000,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 182,
+      "date": "2026-02-17",
+      "description": "AMER ELECT PWR M AND M ROTARY ACH DEBIT CPPWDRAWAL 0731286170",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -3074,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 183,
+      "date": "2026-02-19",
+      "description": "PURCHASE 02-17 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -5047,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 184,
+      "date": "2026-02-24",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 19404,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 185,
+      "date": "2026-02-27",
+      "description": "CHECK 131 Hanna Greer Front Street Fest Reimbursment",
+      "category": "Expense: Service Projects",
+      "amountCents": -1500,
+      "month": "Feb"
+    },
+    {
+      "sourceRow": 186,
+      "date": "2026-03-02",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 9752,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 187,
+      "date": "2026-03-05",
+      "description": "PURCHASE 03-03 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4738,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 188,
+      "date": "2026-03-09",
+      "description": "REGULAR DEPOSIT - Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 4100,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 189,
+      "date": "2026-03-12",
+      "description": "PURCHASE 03-10 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -3605,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 190,
+      "date": "2026-03-13",
+      "description": "CHECK 148 Rotary International",
+      "category": "Expense: Administration (Dues, Supplies, Bank Fees)",
+      "amountCents": -10000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 191,
+      "date": "2026-03-16",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 43659,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 192,
+      "date": "2026-03-18",
+      "description": "AMER ELECT PWR M AND M ROTARY ACH DEBIT CPPWDRAWAL 0731286170",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2877,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 193,
+      "date": "2026-03-19",
+      "description": "PURCHASE 03-17 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -5923,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 194,
+      "date": "2026-03-25",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 14553,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 195,
+      "date": "2026-03-26",
+      "description": "PURCHASE 03-24 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -15811,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 196,
+      "date": "2026-03-30",
+      "description": "CHECK 149 The Rotary Foundation",
+      "category": "Expense: Administration (Dues, Supplies, Bank Fees)",
+      "amountCents": -5000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 197,
+      "date": "2026-03-31",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER",
+      "category": "Revenue: Service Projects",
+      "amountCents": 29305,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 198,
+      "date": "2026-04-02",
+      "description": "PURCHASE 03-31 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": -2678,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 199,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Kathy Smedley Reotary Dues",
+      "category": "Revenue: Member Dues",
+      "amountCents": 16000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 200,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Dana Burt/ Stephanie Burt 100 Year Anniversary",
+      "category": "Expense: Community Events",
+      "amountCents": 10000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 201,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - James D Rogers 100 Year Anniversary",
+      "category": "Expense: Community Events",
+      "amountCents": 10000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 202,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Linda Sheets 100 Year Anniversary",
+      "category": "Expense: Community Events",
+      "amountCents": 5000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 203,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Happy Bucks",
+      "category": "Revenue: Member/Guest Meals",
+      "amountCents": 2400,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 204,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Wendy Gorrell",
+      "category": "Revenue: Member Dues",
+      "amountCents": 109800,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 205,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Brig Brother Big Sisters - Front Street Fest Donation",
+      "category": "Revenue: Front Street Fest",
+      "amountCents": 10000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 206,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Riverside Landing Member Inv 021726",
+      "category": "Revenue: Member Dues",
+      "amountCents": 4000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 207,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Buckeye Hospice Rotary Dues INV 12",
+      "category": "Revenue: Member Dues",
+      "amountCents": 18300,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 208,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT - Villiage of McConnelsville Rotary Dues INV 26",
+      "category": "Revenue: Member Dues",
+      "amountCents": 29300,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 209,
+      "date": "2026-03-24",
+      "description": "REGULAR DEPOST - Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 4000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 210,
+      "date": "2026-03-24",
+      "description": "REGULAR DEPOST - Member Dues",
+      "category": "Revenue: Member Dues",
+      "amountCents": 37378,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 211,
+      "date": "2026-03-24",
+      "description": "REGULAR DEPOST - 100 Year Anniversary Multipule Checks",
+      "category": "Revenue: Service Projects",
+      "amountCents": 70000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 212,
+      "date": "2026-03-09",
+      "description": "REGULAR DEPOSIT - 100 Year Anniversary Multipule Checks",
+      "category": "Revenue: Service Projects",
+      "amountCents": 50000,
+      "month": "Mar"
+    },
+    {
+      "sourceRow": 213,
+      "date": "2026-04-01",
+      "description": "REGULAR DEPOSIT 100 Year Celabration",
+      "category": "Revenue: Other Income",
+      "amountCents": 214800,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 214,
+      "date": "2026-04-02",
+      "description": "PURCHASE 03-31 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -2678,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 215,
+      "date": "2026-04-08",
+      "description": "100th Anniversary Dinner",
+      "category": "Revenue: Other Income",
+      "amountCents": 9652,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 216,
+      "date": "2026-04-09",
+      "description": "PURCHASE 04-07 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -5459,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 217,
+      "date": "2026-04-15",
+      "description": "Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 1900,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 218,
+      "date": "2026-04-16",
+      "description": "REGULAR DEPOSIT",
+      "category": "Revenue: Other Income",
+      "amountCents": 35000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 219,
+      "date": "2026-04-16",
+      "description": "Member/Guest Meals",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -4172,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 220,
+      "date": "2026-04-16",
+      "description": "AMER ELECT PWR M AND M ROTARY ACH DEBIT CPPWDRAWAL 0731286170",
+      "category": "Expense: Sign Lighting",
+      "amountCents": -2870,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 221,
+      "date": "2026-04-21",
+      "description": "PAYPAL MALTA MCCONNELSVILLE R ACH CREDIT TRANSFER 100 Year Celabration",
+      "category": "Revenue: Other Income",
+      "amountCents": 4776,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 222,
+      "date": "2026-04-21",
+      "description": "Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 1200,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 223,
+      "date": "2026-04-23",
+      "description": "PURCHASE 04-21 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -927,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 224,
+      "date": "2026-04-24",
+      "description": "CHECK 150 Morgan County Youth Fishing",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -10000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 225,
+      "date": "2026-04-27",
+      "description": "Front Stret Fest",
+      "category": "Revenue: Front Street Fest",
+      "amountCents": 30000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 226,
+      "date": "2026-04-28",
+      "description": "Front Street Fest American Pride",
+      "category": "Revenue: Front Street Fest",
+      "amountCents": 10000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 227,
+      "date": "2026-04-29",
+      "description": "PURCHASE 04-28 FOE 2187 MCCONNELSVILL MCCONNELSVILL, OH VNT 9140",
+      "category": "Expense: Member/Guest Meals",
+      "amountCents": -3348,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 228,
+      "date": "2026-04-30",
+      "description": "CHECK 151 Dan McNelis 100 Celabration Music",
+      "category": "Expense: Miscellaneous",
+      "amountCents": -15000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 229,
+      "date": "2026-04-10",
+      "description": "Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 2000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 230,
+      "date": "2026-04-10",
+      "description": "Membershp Dues (Dixie & Doug)",
+      "category": "Revenue: Member Dues",
+      "amountCents": 8000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 231,
+      "date": "2026-04-10",
+      "description": "Front Stret Fest - Vendor Fees",
+      "category": "Revenue: Front Street Fest",
+      "amountCents": 6000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 232,
+      "date": "2026-04-10",
+      "description": "100th Anniversary Dinner",
+      "category": "Revenue: Other Income",
+      "amountCents": 5000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 233,
+      "date": "2026-04-10",
+      "description": "125 Club (Bill Flesher)",
+      "category": "Revenue: Foundation Giving",
+      "amountCents": 12500,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 234,
+      "date": "2026-04-27",
+      "description": "100th Anniversary Dinner - Silent Auction",
+      "category": "Revenue: Other Income",
+      "amountCents": 199000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 235,
+      "date": "2026-04-27",
+      "description": "100th Anniversary Dinner",
+      "category": "Revenue: Other Income",
+      "amountCents": 20000,
+      "month": "Apr"
+    },
+    {
+      "sourceRow": 236,
+      "date": "2026-04-28",
+      "description": "Happy Bucks",
+      "category": "Revenue: Other Income",
+      "amountCents": 2000,
+      "month": "Apr"
+    }
+  ],
+  "budget": [
+    {
+      "sourceRow": 2,
+      "type": "Expense",
+      "category": "Adjustment",
+      "item": "Retained Earnings",
+      "amountCents": 33418
+    },
+    {
+      "sourceRow": 3,
+      "type": "Expense",
+      "category": "Club",
+      "item": "Meal Expense",
+      "amountCents": 375000
+    },
+    {
+      "sourceRow": 4,
+      "type": "Expense",
+      "category": "Club",
+      "item": "Member Dues",
+      "amountCents": 283582
+    },
+    {
+      "sourceRow": 5,
+      "type": "Expense",
+      "category": "Operations",
+      "item": "Advertising",
+      "amountCents": 40000
+    },
+    {
+      "sourceRow": 6,
+      "type": "Expense",
+      "category": "Operations",
+      "item": "Conferences(PETs)",
+      "amountCents": 110000
+    },
+    {
+      "sourceRow": 7,
+      "type": "Expense",
+      "category": "Operations",
+      "item": "Misc & Supplies",
+      "amountCents": 10000
+    },
+    {
+      "sourceRow": 8,
+      "type": "Expense",
+      "category": "Operations",
+      "item": "Sign Lighting",
+      "amountCents": 39000
+    },
+    {
+      "sourceRow": 9,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Christmas in the Village",
+      "amountCents": 10000
+    },
+    {
+      "sourceRow": 10,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Discretionary",
+      "amountCents": 50000
+    },
+    {
+      "sourceRow": 11,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Dictionaries",
+      "amountCents": 50000
+    },
+    {
+      "sourceRow": 12,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Feed the Hungry",
+      "amountCents": 50000
+    },
+    {
+      "sourceRow": 13,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Habitat for Humanity",
+      "amountCents": 10000
+    },
+    {
+      "sourceRow": 14,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Heritage Day Exp",
+      "amountCents": 100000
+    },
+    {
+      "sourceRow": 15,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Junior Fair",
+      "amountCents": 100000
+    },
+    {
+      "sourceRow": 16,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Water Testing",
+      "amountCents": 40000
+    },
+    {
+      "sourceRow": 17,
+      "type": "Expense",
+      "category": "Project",
+      "item": "Collage Scholarships",
+      "amountCents": 400000
+    },
+    {
+      "sourceRow": 21,
+      "type": "Income",
+      "category": "Club",
+      "item": "Meal Dues",
+      "amountCents": 375000
+    },
+    {
+      "sourceRow": 22,
+      "type": "Income",
+      "category": "Club",
+      "item": "Member Dues",
+      "amountCents": 416000
+    },
+    {
+      "sourceRow": 23,
+      "type": "Income",
+      "category": "Project",
+      "item": "Happy Bucks",
+      "amountCents": 60000
+    },
+    {
+      "sourceRow": 24,
+      "type": "Income",
+      "category": "Project",
+      "item": "Heritage Day",
+      "amountCents": 100000
+    },
+    {
+      "sourceRow": 25,
+      "type": "Income",
+      "category": "Project",
+      "item": "Rotary Grants",
+      "amountCents": 200000
+    },
+    {
+      "sourceRow": 26,
+      "type": "Income",
+      "category": "Project",
+      "item": "Sign Rental",
+      "amountCents": 550000
+    }
+  ]
+}
