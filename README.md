@@ -14,8 +14,8 @@ A low-cost nonprofit accounting foundation built with TypeScript, Cloudflare Wor
 - Journal entry system with headers, multiple lines, draft/post status, and debit/credit balancing before posting
 - Simple income and expense transaction entry screen backed by the journal entry system
 - Statement of Activities report from posted journal lines with date range and fund filters
-- Balance Sheet, Income Statement, and Budget vs Actual reports for small nonprofit reporting
-- Budget line entry by fiscal year, account, and optional fund
+- Balance Sheet, Income Statement, Budget, and Budget vs Actual reports for small nonprofit reporting
+- Editable Budget tab with fiscal-year budget lines and a PDF annual operating budget
 - Settings page for profile name, password changes, and dashboard logo upload
 - Payroll entry, pay statement PDFs, tax report PDFs, CSV export, and CSV payroll import
 - Server-side form validation
@@ -34,8 +34,8 @@ Key files:
 - `src/accounts.ts`: chart of accounts queries and commands
 - `src/journalEntries.ts`: journal entry validation, draft creation, and posting rules
 - `src/transactions.ts`: simple income/expense entry workflow that creates and posts journal entries
-- `src/reports.ts`: reporting queries for funds and Statement of Activities
-- `migrations/0005_budget_lines.sql`: budget storage for Budget vs Actual reporting
+- `src/reports.ts`: reporting queries for funds, budgets, and financial reports
+- `migrations/0005_budget_lines.sql`: budget storage for editable budget and Budget vs Actual reporting
 - `src/payroll.ts`: payroll calculations, journal entry creation, PDFs, CSV export, and CSV import validation
 - `src/settings.ts`: profile, password, and logo upload helpers
 - `src/database.ts`: PostgreSQL connection helper for a Render/Neon Node.js deployment using `DATABASE_URL`
@@ -194,6 +194,7 @@ The Reports tab includes:
 - Balance Sheet: assets, liabilities, and net assets as of a selected date.
 - Income Statement: revenue, expenses, and net income for a selected date range.
 - Statement of Activities: nonprofit revenue and expense activity with fund filtering.
+- Budget: editable annual income and expense budget lines, plus a PDF annual operating budget.
 - Budget vs Actual: fiscal-year budget lines compared with posted revenue and expense activity.
 
 After pulling this update locally, apply the new budget migration before using Budget vs Actual:
@@ -218,7 +219,7 @@ Use the Organizations page to create and switch between separate books under the
 
 ## Rotary workbook import
 
-The repository includes an import prepared from `Rotary Financial Reporting with Budget.xlsx` for Malta & McConnelsville Rotary Club. It creates the Rotary organization for the selected user, adds the chart of accounts, funds, opening balances, bank activity, and the 2025-2026 budget.
+The repository includes an import prepared from `Rotary Financial Reporting with Budget.xlsx` and aligned to `Rotary Budget.pdf` for Malta & McConnelsville Rotary Club. It creates the Rotary organization for the selected user, adds the chart of accounts, funds, opening balances, bank activity, and the 2025-2026 budget. The imported budget totals $13,766.00 of income and $13,766.00 of expenses.
 
 If there is more than one user, set `IMPORT_USER_EMAIL` so the app knows which login should own the Rotary books:
 

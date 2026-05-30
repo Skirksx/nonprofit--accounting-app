@@ -85,6 +85,28 @@ export type BudgetLineInput = {
   amountCents: number;
 };
 
+export type BudgetLineRecord = {
+  id: string;
+  fiscal_year: number;
+  account_id: string;
+  account_number: string;
+  account_name: string;
+  account_type: AccountType;
+  fund_id: string | null;
+  fund_name: string | null;
+  amount_cents: number;
+};
+
+export type BudgetReport = {
+  organizationName: string;
+  fiscalYear: number;
+  expenses: BudgetLineRecord[];
+  income: BudgetLineRecord[];
+  totalExpensesCents: number;
+  totalIncomeCents: number;
+  netBudgetCents: number;
+};
+
 export type BudgetVsActualRow = FinancialReportRow & {
   budget_cents: number;
   actual_cents: number;
@@ -242,6 +264,59 @@ export async function createBudgetLine(env: Env, input: BudgetLineInput): Promis
     .run();
 }
 
+export async function listBudgetLines(env: Env, organizationId: string, fiscalYear: number): Promise<BudgetLineRecord[]> {
+  const result = await env.DB.prepare(
+    `SELECT
+      budget_lines.id,
+      budget_lines.fiscal_year,
+      accounts.id AS account_id,
+      accounts.account_number,
+      accounts.account_name,
+      accounts.account_type,
+      funds.id AS fund_id,
+      funds.name AS fund_name,
+      budget_lines.amount_cents
+     FROM budget_lines
+     JOIN accounts ON accounts.id = budget_lines.account_id
+     LEFT JOIN funds ON funds.id = budget_lines.fund_id
+     WHERE budget_lines.organization_id = ? AND budget_lines.fiscal_year = ?
+     ORDER BY accounts.account_type ASC, funds.name ASC, accounts.account_number ASC`
+  )
+    .bind(organizationId, fiscalYear)
+    .all<BudgetLineRecord>();
+
+  return result.results ?? [];
+}
+
+export function validateBudgetLineUpdateForm(
+  form: FormData,
+  accounts: ChartAccount[],
+  funds: Fund[],
+  organizationId: string
+): ValidationResult<BudgetLineInput & { id: string }> {
+  const id = stringValue(form, "budgetLineId");
+  const result = validateBudgetLineForm(form, accounts, funds, organizationId);
+  if (!result.ok) return result;
+  if (!id) return { ok: false, errors: { budgetLineId: "Choose a budget line." } };
+  return { ok: true, data: { ...result.data, id } };
+}
+
+export async function updateBudgetLine(env: Env, input: BudgetLineInput & { id: string }): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE budget_lines
+     SET fiscal_year = ?, account_id = ?, fund_id = ?, amount_cents = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(input.fiscalYear, input.accountId, input.fundId, input.amountCents, input.organizationId, input.id)
+    .run();
+}
+
+export async function deleteBudgetLine(env: Env, organizationId: string, budgetLineId: string): Promise<void> {
+  await env.DB.prepare("DELETE FROM budget_lines WHERE organization_id = ? AND id = ?")
+    .bind(organizationId, budgetLineId)
+    .run();
+}
+
 export function validateBudgetLineForm(
   form: FormData,
   accounts: ChartAccount[],
@@ -274,6 +349,48 @@ export function validateBudgetLineForm(
   return Object.keys(errors).length > 0
     ? { ok: false, errors }
     : { ok: true, data: { organizationId, fiscalYear, accountId, fundId, amountCents } };
+}
+
+export async function budgetReport(env: Env, organizationId: string, organizationName: string, fiscalYear: number): Promise<BudgetReport> {
+  const rows = await listBudgetLines(env, organizationId, fiscalYear);
+  const expenses = rows.filter((row) => row.account_type === "expense");
+  const income = rows.filter((row) => row.account_type === "revenue");
+  const totalExpensesCents = sumBudgetRows(expenses);
+  const totalIncomeCents = sumBudgetRows(income);
+
+  return {
+    organizationName,
+    fiscalYear,
+    expenses,
+    income,
+    totalExpensesCents,
+    totalIncomeCents,
+    netBudgetCents: totalIncomeCents - totalExpensesCents
+  };
+}
+
+export function createBudgetReportPdf(report: BudgetReport): ArrayBuffer {
+  const rows: string[] = [
+    "BT /F1 11 Tf 54 690 Td (EXPENSES) Tj ET",
+    ...budgetPdfRows(report.expenses, 668),
+    `BT /F2 10 Tf 54 ${668 - report.expenses.length * 18 - 12} Td (TOTAL EXPENSES) Tj ET`,
+    `BT /F2 10 Tf 460 ${668 - report.expenses.length * 18 - 12} Td (${pdfText(formatMoney(report.totalExpensesCents))}) Tj ET`,
+    "BT /F1 11 Tf 54 360 Td (INCOME) Tj ET",
+    ...budgetPdfRows(report.income, 338),
+    `BT /F2 10 Tf 54 ${338 - report.income.length * 18 - 12} Td (TOTAL INCOME) Tj ET`,
+    `BT /F2 10 Tf 460 ${338 - report.income.length * 18 - 12} Td (${pdfText(formatMoney(report.totalIncomeCents))}) Tj ET`,
+    `BT /F2 10 Tf 54 170 Td (NET BUDGET) Tj ET`,
+    `BT /F2 10 Tf 460 170 Td (${pdfText(formatMoney(report.netBudgetCents))}) Tj ET`,
+    "BT /F1 10 Tf 245 94 Td (Service Above Self) Tj ET"
+  ];
+  const stream = `BT /F2 18 Tf 54 748 Td (${pdfText(report.organizationName)}) Tj ET
+BT /F1 14 Tf 54 724 Td (${report.fiscalYear - 1}-${report.fiscalYear} ANNUAL OPERATING BUDGET) Tj ET
+BT /F2 9 Tf 54 704 Td (Category) Tj ET
+BT /F2 9 Tf 200 704 Td (Description) Tj ET
+BT /F2 9 Tf 460 704 Td (Budget Amount) Tj ET
+${rows.join("\n")}`;
+
+  return buildSimplePdf(stream);
 }
 
 export async function budgetVsActual(
@@ -480,6 +597,25 @@ function sumFinancialRows(rows: FinancialReportRow[]): number {
   return rows.reduce((total, row) => total + row.amount_cents, 0);
 }
 
+function sumBudgetRows(rows: BudgetLineRecord[]): number {
+  return rows.reduce((total, row) => total + row.amount_cents, 0);
+}
+
+function budgetPdfRows(rows: BudgetLineRecord[], startY: number): string[] {
+  return rows.flatMap((row, index) => {
+    const y = startY - index * 18;
+    return [
+      `BT /F1 9 Tf 54 ${y} Td (${pdfText(row.fund_name ?? "General")}) Tj ET`,
+      `BT /F1 9 Tf 200 ${y} Td (${pdfText(budgetDescription(row))}) Tj ET`,
+      `BT /F1 9 Tf 460 ${y} Td (${pdfText(formatMoney(row.amount_cents))}) Tj ET`
+    ];
+  });
+}
+
+function budgetDescription(row: BudgetLineRecord): string {
+  return row.account_name.replace(/\s+(Revenue|Expense)$/i, "");
+}
+
 function stringValue(form: FormData, key: string): string {
   const value = form.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -493,4 +629,43 @@ function dollarsToCents(value: string): number {
 
 function isIsoDate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function formatMoney(amountCents: number): string {
+  const sign = amountCents < 0 ? "-" : "";
+  const absolute = Math.abs(amountCents);
+  return `${sign}$${(absolute / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+function pdfText(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function buildSimplePdf(stream: string): ArrayBuffer {
+  const objects = [
+    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >> endobj",
+    "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
+    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj",
+    `6 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const object of objects) {
+    offsets.push(pdf.length);
+    pdf += `${object}\n`;
+  }
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const bytes = new Uint8Array(pdf.length);
+  for (let index = 0; index < pdf.length; index += 1) bytes[index] = pdf.charCodeAt(index);
+  return bytes.buffer;
 }

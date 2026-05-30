@@ -3,15 +3,19 @@ import test from "node:test";
 
 import {
   balanceSheet,
+  budgetReport,
   budgetVsActual,
+  createBudgetReportPdf,
   incomeStatement,
+  listBudgetLines,
   listFunds,
   parseBalanceSheetFilters,
   parseBudgetVsActualFilters,
   parseFinancialReportFilters,
   parseStatementOfActivitiesFilters,
   statementOfActivities,
-  validateBudgetLineForm
+  validateBudgetLineForm,
+  validateBudgetLineUpdateForm
 } from "../src/reports.ts";
 import type { ChartAccount } from "../src/accounts.ts";
 import type { Env } from "../src/types.ts";
@@ -236,6 +240,89 @@ test("validates a budget line for revenue and expense accounts", () => {
     assert.equal(result.data.amountCents, 150000);
     assert.equal(result.data.fundId, "fund_1");
   }
+});
+
+test("validates a budget line update with an existing row id", () => {
+  const form = new FormData();
+  form.set("budgetLineId", "budget_1");
+  form.set("fiscalYear", "2026");
+  form.set("accountId", "acct_expense");
+  form.set("fundId", "fund_1");
+  form.set("amount", "500.00");
+
+  const result = validateBudgetLineUpdateForm(form, accounts, funds, "org_1");
+
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.data.id, "budget_1");
+    assert.equal(result.data.amountCents, 50000);
+  }
+});
+
+test("lists editable budget lines", async () => {
+  const env = mockEnv({
+    allResults: [
+      [
+        {
+          id: "budget_1",
+          fiscal_year: 2026,
+          account_id: "acct_expense",
+          account_number: "5100",
+          account_name: "Program Supplies Expense",
+          account_type: "expense",
+          fund_id: "fund_1",
+          fund_name: "Projects",
+          amount_cents: 50000
+        }
+      ]
+    ]
+  });
+
+  const rows = await listBudgetLines(env, "org_1", 2026);
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].fund_name, "Projects");
+  assert.match(env.calls[0].sql, /FROM budget_lines/);
+  assert.deepEqual(env.calls[0].bindings, ["org_1", 2026]);
+});
+
+test("builds annual budget report and PDF", async () => {
+  const env = mockEnv({
+    allResults: [
+      [
+        {
+          id: "budget_expense",
+          fiscal_year: 2026,
+          account_id: "acct_expense",
+          account_number: "5100",
+          account_name: "Program Supplies Expense",
+          account_type: "expense",
+          fund_id: "fund_1",
+          fund_name: "Projects",
+          amount_cents: 50000
+        },
+        {
+          id: "budget_revenue",
+          fiscal_year: 2026,
+          account_id: "acct_revenue",
+          account_number: "4000",
+          account_name: "Contributions Revenue",
+          account_type: "revenue",
+          fund_id: "fund_1",
+          fund_name: "Projects",
+          amount_cents: 75000
+        }
+      ]
+    ]
+  });
+
+  const report = await budgetReport(env, "org_1", "Rotary Club", 2026);
+  const pdf = Buffer.from(createBudgetReportPdf(report));
+
+  assert.equal(report.totalExpensesCents, 50000);
+  assert.equal(report.totalIncomeCents, 75000);
+  assert.equal(report.netBudgetCents, 25000);
+  assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
 });
 
 test("builds budget vs actual rows", async () => {

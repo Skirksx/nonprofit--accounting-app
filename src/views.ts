@@ -4,6 +4,7 @@ import type { JournalEntrySummary } from "./journalEntries.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
   BalanceSheetReport,
+  BudgetLineRecord,
   BudgetVsActualReport,
   BudgetVsActualRow,
   FinancialReportRow,
@@ -31,6 +32,7 @@ export function layout(options: {
         ${payrollLink}
         <a href="/funds">Funds</a>
         <a href="/accounts">Chart of accounts</a>
+        <a href="/budget">Budget</a>
         <a href="/reports/statement-of-activities">Reports</a>
         <a href="/organizations">Organizations</a>
         <a href="/settings">Settings</a>
@@ -1000,6 +1002,68 @@ export function budgetVsActualPage(
   });
 }
 
+export function budgetPage(
+  appName: string,
+  context: AuthContext,
+  funds: Fund[],
+  accounts: ChartAccount[],
+  budgetLines: BudgetLineRecord[],
+  fiscalYear: number,
+  errors: Record<string, string> = {}
+): Response {
+  const budgetAccounts = accounts.filter(
+    (account) => account.status === "active" && ["revenue", "expense"].includes(account.account_type)
+  );
+
+  return layout({
+    title: "Budget",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Budget</h1>
+        <p class="muted">Add, edit, and remove annual budget lines for income and expenses.</p>
+      </section>
+      <section class="split">
+        <form method="get" action="/budget" class="form-card">
+          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(fiscalYear), "2026")}
+          <div class="form-actions">
+            <a class="button-like" href="/budget/report.pdf?fiscalYear=${encodeURIComponent(String(fiscalYear))}">Download budget PDF</a>
+            <button type="submit">Open year</button>
+          </div>
+        </form>
+        <form method="post" action="/budget" class="form-card">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <h2>Add budget line</h2>
+          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(fiscalYear), "2026")}
+          <label>Account
+            <select name="accountId">
+              ${accountOptions(budgetAccounts, "No active revenue or expense accounts")}
+            </select>
+            ${errorText(errors.accountId)}
+          </label>
+          <label>Fund
+            <select name="fundId">
+              <option value="">No fund</option>
+              ${fundOptions(funds)}
+            </select>
+            ${errorText(errors.fundId)}
+          </label>
+          <label>Budget amount
+            <input name="amount" type="number" min="0" step="0.01" placeholder="0.00" required>
+            ${errorText(errors.amount)}
+          </label>
+          <button type="submit">Add budget line</button>
+        </form>
+      </section>
+      <section class="content-band report-section budget-editor">
+        <h2>Budget lines</h2>
+        ${errors.budgetLineId ? `<p class="alert">${escapeHtml(errors.budgetLineId)}</p>` : ""}
+        ${budgetLineTable(budgetLines, budgetAccounts, funds, context.csrfToken)}
+      </section>`
+  });
+}
+
 export function organizationAlreadyConfiguredPage(appName: string): Response {
   return layout({
     title: "Setup unavailable",
@@ -1072,15 +1136,17 @@ function monthOptions(): string {
     .join("");
 }
 
-function accountOptions(accounts: ChartAccount[], emptyText: string): string {
+function accountOptions(accounts: ChartAccount[], emptyText: string, selectedAccountId = ""): string {
   if (accounts.length === 0) {
     return `<option value="">${escapeHtml(emptyText)}</option>`;
   }
 
   return accounts
     .map(
-      (account) =>
-        `<option value="${escapeHtml(account.id)}">${escapeHtml(account.account_number)} - ${escapeHtml(account.account_name)}</option>`
+      (account) => {
+        const optionSelected = account.id === selectedAccountId ? " selected" : "";
+        return `<option value="${escapeHtml(account.id)}"${optionSelected}>${escapeHtml(account.account_number)} - ${escapeHtml(account.account_name)}</option>`;
+      }
     )
     .join("");
 }
@@ -1261,11 +1327,58 @@ function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
   </div>`;
 }
 
+function budgetLineTable(rows: BudgetLineRecord[], accounts: ChartAccount[], funds: Fund[], csrfToken: string): string {
+  const body = rows.length
+    ? rows
+        .map(
+          (row) => {
+            const formId = `budget-form-${row.id}`;
+            return `<tr>
+            <td>
+                <input form="${escapeHtml(formId)}" name="fiscalYear" type="number" min="2000" max="2100" value="${escapeHtml(String(row.fiscal_year))}" required>
+            </td>
+            <td>
+                <select form="${escapeHtml(formId)}" name="accountId">
+                  ${accountOptions(accounts, "No active revenue or expense accounts", row.account_id)}
+                </select>
+            </td>
+            <td>
+                <select form="${escapeHtml(formId)}" name="fundId">
+                  <option value="">No fund</option>
+                  ${fundOptions(funds, row.fund_id ?? "")}
+                </select>
+            </td>
+            <td>
+                <input form="${escapeHtml(formId)}" name="amount" type="number" min="0" step="0.01" value="${centsInputValue(row.amount_cents)}" required>
+            </td>
+            <td class="budget-actions">
+              <form id="${escapeHtml(formId)}" method="post" action="/budget/update" class="table-edit-form">
+                <input type="hidden" name="csrfToken" value="${escapeHtml(csrfToken)}">
+                <input type="hidden" name="budgetLineId" value="${escapeHtml(row.id)}">
+                <button class="small-button" type="submit">Save</button>
+                <button class="danger-button small-button" type="submit" formaction="/budget/delete">Delete</button>
+              </form>
+            </td>
+          </tr>`;
+          }
+        )
+        .join("")
+    : `<tr><td colspan="5" class="empty">No budget lines for this year yet.</td></tr>`;
+
+  return `<div class="table-wrap report-table">
+    <table>
+      <thead><tr><th>Year</th><th>Account</th><th>Fund</th><th>Amount</th><th>Actions</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
 function reportNav(): string {
   return `<nav class="report-nav" aria-label="Financial reports">
     <a href="/reports/balance-sheet">Balance Sheet</a>
     <a href="/reports/income-statement">Income Statement</a>
     <a href="/reports/statement-of-activities">Statement of Activities</a>
+    <a href="/budget">Budget</a>
     <a href="/reports/budget-vs-actual">Budget vs Actual</a>
   </nav>`;
 }

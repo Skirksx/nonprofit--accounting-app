@@ -1908,7 +1908,7 @@
       "type": "Expense",
       "category": "Club",
       "item": "Meal Expense",
-      "amountCents": 375000
+      "amountCents": 50600
     },
     {
       "sourceRow": 4,
@@ -1928,14 +1928,14 @@
       "sourceRow": 6,
       "type": "Expense",
       "category": "Operations",
-      "item": "Conferences(PETs)",
+      "item": "PETS Conference",
       "amountCents": 110000
     },
     {
       "sourceRow": 7,
       "type": "Expense",
       "category": "Operations",
-      "item": "Misc & Supplies",
+      "item": "Miscellaneous & Supplies",
       "amountCents": 10000
     },
     {
@@ -1948,64 +1948,64 @@
     {
       "sourceRow": 9,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Christmas in the Village",
       "amountCents": 10000
     },
     {
       "sourceRow": 10,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Discretionary",
       "amountCents": 50000
     },
     {
       "sourceRow": 11,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Dictionaries",
       "amountCents": 50000
     },
     {
       "sourceRow": 12,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Feed the Hungry",
       "amountCents": 50000
     },
     {
       "sourceRow": 13,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Habitat for Humanity",
       "amountCents": 10000
     },
     {
       "sourceRow": 14,
       "type": "Expense",
-      "category": "Project",
-      "item": "Heritage Day Exp",
+      "category": "Projects",
+      "item": "Heritage Day Expense",
       "amountCents": 100000
     },
     {
       "sourceRow": 15,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Junior Fair",
       "amountCents": 100000
     },
     {
       "sourceRow": 16,
       "type": "Expense",
-      "category": "Project",
+      "category": "Projects",
       "item": "Water Testing",
       "amountCents": 40000
     },
     {
       "sourceRow": 17,
       "type": "Expense",
-      "category": "Project",
-      "item": "Collage Scholarships",
+      "category": "Projects",
+      "item": "College Scholarships",
       "amountCents": 400000
     },
     {
@@ -2013,7 +2013,7 @@
       "type": "Income",
       "category": "Club",
       "item": "Meal Dues",
-      "amountCents": 375000
+      "amountCents": 50600
     },
     {
       "sourceRow": 22,
@@ -2025,28 +2025,28 @@
     {
       "sourceRow": 23,
       "type": "Income",
-      "category": "Project",
+      "category": "Projects",
       "item": "Happy Bucks",
       "amountCents": 60000
     },
     {
       "sourceRow": 24,
       "type": "Income",
-      "category": "Project",
+      "category": "Projects",
       "item": "Heritage Day",
       "amountCents": 100000
     },
     {
       "sourceRow": 25,
       "type": "Income",
-      "category": "Project",
+      "category": "Projects",
       "item": "Rotary Grants",
       "amountCents": 200000
     },
     {
       "sourceRow": 26,
       "type": "Income",
-      "category": "Project",
+      "category": "Projects",
       "item": "Sign Rental",
       "amountCents": 550000
     }

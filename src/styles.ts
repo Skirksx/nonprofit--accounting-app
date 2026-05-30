@@ -398,6 +398,18 @@ h2 {
   gap: 1rem;
 }
 
+.budget-editor input,
+.budget-editor select {
+  min-width: 9rem;
+}
+
+.table-edit-form,
+.budget-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .employee-editor {
   border-top: 1px solid var(--line);
   padding-top: 1rem;
