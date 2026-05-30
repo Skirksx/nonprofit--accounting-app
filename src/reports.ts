@@ -370,27 +370,23 @@ export async function budgetReport(env: Env, organizationId: string, organizatio
 }
 
 export function createBudgetReportPdf(report: BudgetReport): ArrayBuffer {
-  const rows: string[] = [
-    "BT /F1 11 Tf 54 690 Td (EXPENSES) Tj ET",
-    ...budgetPdfRows(report.expenses, 668),
-    `BT /F2 10 Tf 54 ${668 - report.expenses.length * 18 - 12} Td (TOTAL EXPENSES) Tj ET`,
-    `BT /F2 10 Tf 460 ${668 - report.expenses.length * 18 - 12} Td (${pdfText(formatMoney(report.totalExpensesCents))}) Tj ET`,
-    "BT /F1 11 Tf 54 360 Td (INCOME) Tj ET",
-    ...budgetPdfRows(report.income, 338),
-    `BT /F2 10 Tf 54 ${338 - report.income.length * 18 - 12} Td (TOTAL INCOME) Tj ET`,
-    `BT /F2 10 Tf 460 ${338 - report.income.length * 18 - 12} Td (${pdfText(formatMoney(report.totalIncomeCents))}) Tj ET`,
-    `BT /F2 10 Tf 54 170 Td (NET BUDGET) Tj ET`,
-    `BT /F2 10 Tf 460 170 Td (${pdfText(formatMoney(report.netBudgetCents))}) Tj ET`,
-    "BT /F1 10 Tf 245 94 Td (Service Above Self) Tj ET"
+  const operations = [
+    "0.12 0.18 0.15 rg",
+    pdfCenteredText(report.organizationName, 20, 748, "F2"),
+    pdfCenteredText(`${report.fiscalYear - 1}-${report.fiscalYear} ANNUAL OPERATING BUDGET`, 14, 724, "F2")
   ];
-  const stream = `BT /F2 18 Tf 54 748 Td (${pdfText(report.organizationName)}) Tj ET
-BT /F1 14 Tf 54 724 Td (${report.fiscalYear - 1}-${report.fiscalYear} ANNUAL OPERATING BUDGET) Tj ET
-BT /F2 9 Tf 54 704 Td (Category) Tj ET
-BT /F2 9 Tf 200 704 Td (Description) Tj ET
-BT /F2 9 Tf 460 704 Td (Budget Amount) Tj ET
-${rows.join("\n")}`;
+  const afterExpenses = budgetReportSection(operations, "EXPENSES", report.expenses, report.totalExpensesCents, "TOTAL EXPENSES", 690);
+  const afterIncome = budgetReportSection(operations, "INCOME", report.income, report.totalIncomeCents, "TOTAL INCOME", afterExpenses - 18);
 
-  return buildSimplePdf(stream);
+  operations.push(
+    pdfFillRect(42, afterIncome - 2, 528, 22, "0.88 0.93 0.90"),
+    pdfStrokeRect(42, afterIncome - 2, 528, 22),
+    pdfTextAt("NET BUDGET", 50, afterIncome + 5, 10, "F2"),
+    pdfTextAt(formatMoney(report.netBudgetCents), 494, afterIncome + 5, 10, "F2"),
+    pdfCenteredText("Service Above Self", 10, 82, "F1")
+  );
+
+  return buildSimplePdf(operations.join("\n"));
 }
 
 export async function budgetVsActual(
@@ -601,19 +597,60 @@ function sumBudgetRows(rows: BudgetLineRecord[]): number {
   return rows.reduce((total, row) => total + row.amount_cents, 0);
 }
 
-function budgetPdfRows(rows: BudgetLineRecord[], startY: number): string[] {
-  return rows.flatMap((row, index) => {
-    const y = startY - index * 18;
-    return [
-      `BT /F1 9 Tf 54 ${y} Td (${pdfText(row.fund_name ?? "General")}) Tj ET`,
-      `BT /F1 9 Tf 200 ${y} Td (${pdfText(budgetDescription(row))}) Tj ET`,
-      `BT /F1 9 Tf 460 ${y} Td (${pdfText(formatMoney(row.amount_cents))}) Tj ET`
-    ];
-  });
-}
-
 function budgetDescription(row: BudgetLineRecord): string {
   return row.account_name.replace(/\s+(Revenue|Expense)$/i, "");
+}
+
+function budgetReportSection(
+  operations: string[],
+  title: string,
+  rows: BudgetLineRecord[],
+  totalCents: number,
+  totalLabel: string,
+  topY: number
+): number {
+  const x = 42;
+  const width = 528;
+  const rowHeight = 18;
+  const categoryWidth = 148;
+  const descriptionWidth = 248;
+  const amountWidth = width - categoryWidth - descriptionWidth;
+  let y = topY;
+
+  operations.push(
+    pdfFillRect(x, y, width, 22, "0.80 0.86 0.82"),
+    pdfStrokeRect(x, y, width, 22),
+    pdfTextAt(title, x + 8, y + 7, 11, "F2")
+  );
+  y -= rowHeight;
+
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.92 0.95 0.93"),
+    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
+    pdfTextAt("Category", x + 8, y + 5, 9, "F2"),
+    pdfTextAt("Description", x + categoryWidth + 8, y + 5, 9, "F2"),
+    pdfTextAt("Budget Amount", x + categoryWidth + descriptionWidth + 22, y + 5, 9, "F2")
+  );
+  y -= rowHeight;
+
+  for (const row of rows) {
+    operations.push(
+      pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
+      pdfTextAt(row.fund_name ?? "General", x + 8, y + 5, 9, "F1"),
+      pdfTextAt(budgetDescription(row), x + categoryWidth + 8, y + 5, 9, "F1"),
+      pdfTextAt(formatMoney(row.amount_cents), x + categoryWidth + descriptionWidth + 44, y + 5, 9, "F1")
+    );
+    y -= rowHeight;
+  }
+
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.96 0.97 0.95"),
+    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
+    pdfTextAt(totalLabel, x + 8, y + 5, 10, "F2"),
+    pdfTextAt(formatMoney(totalCents), x + categoryWidth + descriptionWidth + 44, y + 5, 10, "F2")
+  );
+
+  return y - 28;
 }
 
 function stringValue(form: FormData, key: string): string {
@@ -642,6 +679,35 @@ function formatMoney(amountCents: number): string {
 
 function pdfText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function pdfTextAt(value: string, x: number, y: number, size: number, font: "F1" | "F2"): string {
+  return `BT /${font} ${size} Tf ${x} ${y} Td (${pdfText(value)}) Tj ET`;
+}
+
+function pdfCenteredText(value: string, size: number, y: number, font: "F1" | "F2"): string {
+  const approximateWidth = value.length * size * 0.28;
+  return pdfTextAt(value, Math.max(42, 306 - approximateWidth), y, size, font);
+}
+
+function pdfFillRect(x: number, y: number, width: number, height: number, color: string): string {
+  return `q ${color} rg ${x} ${y} ${width} ${height} re f Q`;
+}
+
+function pdfStrokeRect(x: number, y: number, width: number, height: number): string {
+  return `q 0.55 0.60 0.56 RG 0.7 w ${x} ${y} ${width} ${height} re S Q`;
+}
+
+function pdfTableGrid(x: number, y: number, width: number, height: number, columns: number[]): string {
+  let cursor = x;
+  const verticals = columns
+    .slice(0, -1)
+    .map((columnWidth) => {
+      cursor += columnWidth;
+      return `${cursor} ${y} m ${cursor} ${y + height} l`;
+    })
+    .join(" ");
+  return `q 0.55 0.60 0.56 RG 0.7 w ${x} ${y} ${width} ${height} re S ${verticals} S Q`;
 }
 
 function buildSimplePdf(stream: string): ArrayBuffer {
