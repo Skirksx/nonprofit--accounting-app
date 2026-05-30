@@ -371,19 +371,26 @@ export async function budgetReport(env: Env, organizationId: string, organizatio
 
 export function createBudgetReportPdf(report: BudgetReport): ArrayBuffer {
   const operations = [
-    "0.12 0.18 0.15 rg",
-    pdfCenteredText(report.organizationName, 20, 748, "F2"),
-    pdfCenteredText(`${report.fiscalYear - 1}-${report.fiscalYear} ANNUAL OPERATING BUDGET`, 14, 724, "F2")
+    pdfFillRect(0, 0, 612, 792, "1 1 1"),
+    pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
+    pdfFillRect(43, 649, 526, 106, "0.98 0.99 1"),
+    pdfFillRect(43, 611, 526, 38, "0.00 0.23 0.47"),
+    pdfFillRect(43, 649, 112, 106, "0.90 0.96 1"),
+    pdfDiagonalLines(),
+    pdfTextAt("Rotary", 336, 703, 34, "F2", "0.00 0.23 0.47"),
+    ...pdfRotaryMark(500, 720, 28),
+    pdfTextAt(report.organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
+    pdfCenteredText(`${report.fiscalYear - 1}-${report.fiscalYear} ANNUAL OPERATING BUDGET`, 17, 624, "F2", "1 1 1")
   ];
-  const afterExpenses = budgetReportSection(operations, "EXPENSES", report.expenses, report.totalExpensesCents, "TOTAL EXPENSES", 690);
-  const afterIncome = budgetReportSection(operations, "INCOME", report.income, report.totalIncomeCents, "TOTAL INCOME", afterExpenses - 18);
+  const afterExpenses = budgetReportSection(operations, "EXPENSES", report.expenses, report.totalExpensesCents, "TOTAL EXPENSES", 570, "expenses");
+  const afterIncome = budgetReportSection(operations, "INCOME", report.income, report.totalIncomeCents, "TOTAL INCOME", afterExpenses - 28, "income");
 
   operations.push(
-    pdfFillRect(42, afterIncome - 2, 528, 22, "0.88 0.93 0.90"),
-    pdfStrokeRect(42, afterIncome - 2, 528, 22),
-    pdfTextAt("NET BUDGET", 50, afterIncome + 5, 10, "F2"),
-    pdfTextAt(formatMoney(report.netBudgetCents), 494, afterIncome + 5, 10, "F2"),
-    pdfCenteredText("Service Above Self", 10, 82, "F1")
+    pdfFillRect(62, afterIncome - 12, 488, 28, "0.00 0.23 0.47"),
+    pdfTextAt("NET BUDGET", 218, afterIncome - 2, 13, "F2", "1 1 1"),
+    pdfTextAt("|", 362, afterIncome - 2, 13, "F2", "1 1 1"),
+    pdfTextAt(formatMoney(report.netBudgetCents), 394, afterIncome - 2, 13, "F2", "1 1 1"),
+    pdfCenteredText("Service Above Self", 9, afterIncome - 26, "F3", "0.00 0.23 0.47")
   );
 
   return buildSimplePdf(operations.join("\n"));
@@ -607,50 +614,51 @@ function budgetReportSection(
   rows: BudgetLineRecord[],
   totalCents: number,
   totalLabel: string,
-  topY: number
+  topY: number,
+  icon: "expenses" | "income"
 ): number {
-  const x = 42;
-  const width = 528;
-  const rowHeight = 18;
-  const categoryWidth = 148;
-  const descriptionWidth = 248;
+  const x = 62;
+  const width = 488;
+  const rowHeight = 14;
+  const categoryWidth = 122;
+  const descriptionWidth = 238;
   const amountWidth = width - categoryWidth - descriptionWidth;
   let y = topY;
 
   operations.push(
-    pdfFillRect(x, y, width, 22, "0.80 0.86 0.82"),
-    pdfStrokeRect(x, y, width, 22),
-    pdfTextAt(title, x + 8, y + 7, 11, "F2")
+    ...pdfSectionIcon(x + 20, y + 13, icon),
+    pdfTextAt(title, x + 48, y + 4, 19, "F2", "0.00 0.23 0.47"),
+    pdfFillRect(x + 48, y - 3, width - 48, 2, "0.97 0.67 0.00")
   );
-  y -= rowHeight;
+  y -= 18;
 
   operations.push(
-    pdfFillRect(x, y, width, rowHeight, "0.92 0.95 0.93"),
-    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
-    pdfTextAt("Category", x + 8, y + 5, 9, "F2"),
-    pdfTextAt("Description", x + categoryWidth + 8, y + 5, 9, "F2"),
-    pdfTextAt("Budget Amount", x + categoryWidth + descriptionWidth + 22, y + 5, 9, "F2")
+    pdfFillRect(x, y, width, rowHeight, "0.00 0.23 0.47"),
+    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt("Category", x + 32, y + 4, 8, "F2", "1 1 1"),
+    pdfTextAt("Description", x + categoryWidth + 62, y + 4, 8, "F2", "1 1 1"),
+    pdfTextAt("Budget Amount", x + categoryWidth + descriptionWidth + 32, y + 4, 8, "F2", "1 1 1")
   );
   y -= rowHeight;
 
   for (const row of rows) {
     operations.push(
-      pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
-      pdfTextAt(row.fund_name ?? "General", x + 8, y + 5, 9, "F1"),
-      pdfTextAt(budgetDescription(row), x + categoryWidth + 8, y + 5, 9, "F1"),
-      pdfTextAt(formatMoney(row.amount_cents), x + categoryWidth + descriptionWidth + 44, y + 5, 9, "F1")
+      pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+      pdfTextAt(row.fund_name ?? "General", x + 10, y + 4, 7.8, "F1", "0.10 0.12 0.14"),
+      pdfTextAt(budgetDescription(row), x + categoryWidth + 10, y + 4, 7.8, "F1", "0.10 0.12 0.14"),
+      pdfRightText(formatMoney(row.amount_cents), x + width - 10, y + 4, 7.8, "F1", "0.10 0.12 0.14")
     );
     y -= rowHeight;
   }
 
   operations.push(
-    pdfFillRect(x, y, width, rowHeight, "0.96 0.97 0.95"),
-    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth]),
-    pdfTextAt(totalLabel, x + 8, y + 5, 10, "F2"),
-    pdfTextAt(formatMoney(totalCents), x + categoryWidth + descriptionWidth + 44, y + 5, 10, "F2")
+    pdfFillRect(x, y, width, rowHeight, "0.88 0.94 0.98"),
+    pdfTableGrid(x, y, width, rowHeight, [categoryWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt(totalLabel, x + categoryWidth + 10, y + 4, 8.5, "F2", "0.00 0.23 0.47"),
+    pdfRightText(formatMoney(totalCents), x + width - 10, y + 4, 8.5, "F2", "0.00 0.23 0.47")
   );
 
-  return y - 28;
+  return y - 20;
 }
 
 function stringValue(form: FormData, key: string): string {
@@ -681,24 +689,29 @@ function pdfText(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-function pdfTextAt(value: string, x: number, y: number, size: number, font: "F1" | "F2"): string {
-  return `BT /${font} ${size} Tf ${x} ${y} Td (${pdfText(value)}) Tj ET`;
+function pdfTextAt(value: string, x: number, y: number, size: number, font: "F1" | "F2" | "F3", color = "0.10 0.12 0.14"): string {
+  return `BT ${color} rg /${font} ${size} Tf ${x} ${y} Td (${pdfText(value)}) Tj ET`;
 }
 
-function pdfCenteredText(value: string, size: number, y: number, font: "F1" | "F2"): string {
+function pdfRightText(value: string, rightX: number, y: number, size: number, font: "F1" | "F2" | "F3", color = "0.10 0.12 0.14"): string {
+  const approximateWidth = value.length * size * 0.43;
+  return pdfTextAt(value, rightX - approximateWidth, y, size, font, color);
+}
+
+function pdfCenteredText(value: string, size: number, y: number, font: "F1" | "F2" | "F3", color = "0.10 0.12 0.14"): string {
   const approximateWidth = value.length * size * 0.28;
-  return pdfTextAt(value, Math.max(42, 306 - approximateWidth), y, size, font);
+  return pdfTextAt(value, Math.max(42, 306 - approximateWidth), y, size, font, color);
 }
 
 function pdfFillRect(x: number, y: number, width: number, height: number, color: string): string {
   return `q ${color} rg ${x} ${y} ${width} ${height} re f Q`;
 }
 
-function pdfStrokeRect(x: number, y: number, width: number, height: number): string {
-  return `q 0.55 0.60 0.56 RG 0.7 w ${x} ${y} ${width} ${height} re S Q`;
+function pdfStrokeRect(x: number, y: number, width: number, height: number, color = "0.55 0.60 0.56", lineWidth = 0.7): string {
+  return `q ${color} RG ${lineWidth} w ${x} ${y} ${width} ${height} re S Q`;
 }
 
-function pdfTableGrid(x: number, y: number, width: number, height: number, columns: number[]): string {
+function pdfTableGrid(x: number, y: number, width: number, height: number, columns: number[], color = "0.55 0.60 0.56"): string {
   let cursor = x;
   const verticals = columns
     .slice(0, -1)
@@ -707,17 +720,83 @@ function pdfTableGrid(x: number, y: number, width: number, height: number, colum
       return `${cursor} ${y} m ${cursor} ${y + height} l`;
     })
     .join(" ");
-  return `q 0.55 0.60 0.56 RG 0.7 w ${x} ${y} ${width} ${height} re S ${verticals} S Q`;
+  return `q ${color} RG 0.45 w ${x} ${y} ${width} ${height} re S ${verticals} S Q`;
+}
+
+function pdfDiagonalLines(): string {
+  return [
+    "q 0.88 0.94 1 RG 0.6 w",
+    "50 735 m 140 755 l S",
+    "50 722 m 170 755 l S",
+    "450 58 m 560 88 l S",
+    "470 46 m 570 74 l S",
+    "Q"
+  ].join(" ");
+}
+
+function pdfRotaryMark(cx: number, cy: number, radius: number): string[] {
+  const marks: string[] = [];
+  for (let index = 0; index < 16; index += 1) {
+    const angle = (Math.PI * 2 * index) / 16;
+    const x = cx + Math.cos(angle) * (radius + 4) - 2;
+    const y = cy + Math.sin(angle) * (radius + 4) - 2;
+    marks.push(pdfFillRect(Number(x.toFixed(2)), Number(y.toFixed(2)), 4, 4, "0.97 0.67 0.00"));
+  }
+  marks.push(
+    pdfCircle(cx, cy, radius, "0.97 0.67 0.00", "f"),
+    pdfCircle(cx, cy, radius * 0.52, "1 1 1", "f"),
+    pdfCircle(cx, cy, radius * 0.22, "0.97 0.67 0.00", "f"),
+    pdfTextAt("ROTARY", cx - 18, cy + radius + 7, 5.5, "F2", "0.97 0.67 0.00")
+  );
+  return marks;
+}
+
+function pdfSectionIcon(cx: number, cy: number, icon: "expenses" | "income"): string[] {
+  const base = [
+    pdfCircle(cx, cy, 19, "0.00 0.23 0.47", "f"),
+    `q 1 1 1 RG 1.3 w`
+  ];
+  if (icon === "expenses") {
+    base.push(
+      `${cx - 9} ${cy - 5} 17 11 re S`,
+      `${cx - 5} ${cy + 6} m ${cx + 9} ${cy + 6} l S`,
+      `${cx + 3} ${cy - 2} 4 4 re S`,
+      "Q"
+    );
+  } else {
+    base.push(
+      `${cx - 9} ${cy - 9} m ${cx - 9} ${cy + 8} l ${cx + 10} ${cy + 8} l S`,
+      `${cx - 6} ${cy - 5} m ${cx - 1} ${cy + 1} l ${cx + 4} ${cy - 2} l ${cx + 9} ${cy + 6} l S`,
+      "Q"
+    );
+  }
+  return base;
+}
+
+function pdfCircle(cx: number, cy: number, radius: number, color: string, mode: "f" | "S"): string {
+  const c = Number((radius * 0.5522847498).toFixed(2));
+  const r = Number(radius.toFixed(2));
+  const colorOperator = mode === "f" ? "rg" : "RG";
+  return [
+    `q ${color} ${colorOperator}`,
+    `${cx + r} ${cy} m`,
+    `${cx + r} ${cy + c} ${cx + c} ${cy + r} ${cx} ${cy + r} c`,
+    `${cx - c} ${cy + r} ${cx - r} ${cy + c} ${cx - r} ${cy} c`,
+    `${cx - r} ${cy - c} ${cx - c} ${cy - r} ${cx} ${cy - r} c`,
+    `${cx + c} ${cy - r} ${cx + r} ${cy - c} ${cx + r} ${cy} c`,
+    `${mode} Q`
+  ].join(" ");
 }
 
 function buildSimplePdf(stream: string): ArrayBuffer {
   const objects = [
     "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
     "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >> endobj",
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents 7 0 R >> endobj",
     "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
     "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj",
-    `6 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`
+    "6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >> endobj",
+    `7 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`
   ];
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
