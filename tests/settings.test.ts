@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   logoFileToDataUrl,
+  validateOrganizationProfile,
   validatePasswordFields,
   validateProfileName
 } from "../src/settings.ts";
@@ -33,6 +34,28 @@ test("rejects weak or mismatched password changes", () => {
     assert.equal(result.errors.newPassword, "Use at least 12 characters.");
     assert.equal(result.errors.confirmPassword, "Passwords do not match.");
   }
+});
+
+test("validates organization profile changes", () => {
+  const form = new FormData();
+  form.set("organizationProfile", "rotary");
+
+  const result = validateOrganizationProfile(form);
+
+  assert.deepEqual(result, {
+    ok: true,
+    data: { organizationProfile: "rotary" }
+  });
+});
+
+test("rejects invalid organization profile changes", () => {
+  const form = new FormData();
+  form.set("organizationProfile", "business");
+
+  const result = validateOrganizationProfile(form);
+
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.errors.organizationProfile, "Choose church or Rotary.");
 });
 
 test("converts a small png logo to a data url", async () => {

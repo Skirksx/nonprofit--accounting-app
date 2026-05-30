@@ -415,6 +415,18 @@ export function settingsPage(
           </label>
           <button type="submit">Save name</button>
         </form>
+        <form method="post" action="/settings/organization-profile" class="form-card">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <h2>Organization type</h2>
+          <label>Layout
+            <select name="organizationProfile">
+              <option value="church"${selected(context.organization.organization_profile, "church")}>Church</option>
+              <option value="rotary"${selected(context.organization.organization_profile, "rotary")}>Rotary / service club</option>
+            </select>
+            ${errorText(errors.organizationProfile)}
+          </label>
+          <button type="submit">Save organization type</button>
+        </form>
         <form method="post" action="/settings/password" class="form-card">
           <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
           <h2>Password</h2>

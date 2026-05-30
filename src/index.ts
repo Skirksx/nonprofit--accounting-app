@@ -42,9 +42,11 @@ import {
 } from "./reports.ts";
 import {
   logoFileToDataUrl,
+  updateOrganizationProfile,
   updateOrganizationLogo,
   updateUserName,
   updateUserPassword,
+  validateOrganizationProfile,
   validatePasswordFields,
   validateProfileName
 } from "./settings.ts";
@@ -96,6 +98,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/payroll/import/payroll.csv", handler: postPayrollCsvImport },
   { method: "GET", path: "/settings", handler: getSettings },
   { method: "POST", path: "/settings/profile", handler: postSettingsProfile },
+  { method: "POST", path: "/settings/organization-profile", handler: postSettingsOrganizationProfile },
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
@@ -565,6 +568,24 @@ async function postSettingsProfile(request: Request, env: Env): Promise<Response
   if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
 
   await updateUserName(env, context.user.id, result.data.name);
+  return redirect("/settings");
+}
+
+async function postSettingsOrganizationProfile(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const result = validateOrganizationProfile(form);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
+
+  await updateOrganizationProfile(env, context.organization.id, result.data.organizationProfile);
   return redirect("/settings");
 }
 

@@ -1,5 +1,5 @@
 import { hashPassword, verifyPassword } from "./crypto.ts";
-import type { Env } from "./types.ts";
+import type { Env, OrganizationProfile } from "./types.ts";
 import type { ValidationResult } from "./validation.ts";
 
 const MAX_LOGO_BYTES = 1_500_000;
@@ -31,6 +31,15 @@ export function validatePasswordFields(form: FormData): ValidationResult<{
   return Object.keys(errors).length > 0
     ? { ok: false, errors }
     : { ok: true, data: { currentPassword, newPassword } };
+}
+
+export function validateOrganizationProfile(form: FormData): ValidationResult<{ organizationProfile: OrganizationProfile }> {
+  const organizationProfile = stringValue(form, "organizationProfile") as OrganizationProfile;
+  if (!["church", "rotary"].includes(organizationProfile)) {
+    return { ok: false, errors: { organizationProfile: "Choose church or Rotary." } };
+  }
+
+  return { ok: true, data: { organizationProfile } };
 }
 
 export async function updateUserName(env: Env, userId: string, name: string): Promise<void> {
@@ -75,6 +84,18 @@ export async function updateUserPassword(
     .run();
 
   return { ok: true, data: null };
+}
+
+export async function updateOrganizationProfile(
+  env: Env,
+  organizationId: string,
+  organizationProfile: OrganizationProfile
+): Promise<void> {
+  await env.DB.prepare(
+    "UPDATE organizations SET organization_profile = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+  )
+    .bind(organizationProfile, organizationId)
+    .run();
 }
 
 export async function logoFileToDataUrl(file: File): Promise<ValidationResult<{ logoDataUrl: string }>> {
