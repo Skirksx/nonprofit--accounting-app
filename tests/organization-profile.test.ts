@@ -75,6 +75,7 @@ function authContext(profile: OrganizationProfile): AuthContext {
       logo_data_url: null
     },
     role: "owner",
-    csrfToken: "csrf_1"
+    csrfToken: "csrf_1",
+    sessionId: "ses_1"
   };
 }

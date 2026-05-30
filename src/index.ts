@@ -1,5 +1,14 @@
 import { accountStats, createAccount, listAccounts } from "./accounts.ts";
-import { attemptLogin, logout, redirect, requireAuth, requireRole, validateCsrf } from "./auth.ts";
+import {
+  attemptLogin,
+  listUserOrganizations,
+  logout,
+  redirect,
+  requireAuth,
+  requireRole,
+  switchOrganization,
+  validateCsrf
+} from "./auth.ts";
 import { hashPassword, randomId } from "./crypto.ts";
 import {
   createDraftJournalEntry,
@@ -53,7 +62,7 @@ import {
 import { styles } from "./styles.ts";
 import { createAndPostSimpleTransaction, validateSimpleTransactionForm } from "./transactions.ts";
 import type { Env, RouteHandler } from "./types.ts";
-import { validateAccount, validateLogin, validateSetup } from "./validation.ts";
+import { validateAccount, validateLogin, validateOrganizationWorkspace, validateSetup } from "./validation.ts";
 import {
   accountsPage,
   balanceSheetPage,
@@ -64,6 +73,7 @@ import {
   journalEntryPage,
   loginPage,
   organizationAlreadyConfiguredPage,
+  organizationsPage,
   payrollPage,
   settingsPage,
   statementOfActivitiesPage,
@@ -79,6 +89,9 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/setup", handler: getSetup },
   { method: "POST", path: "/setup", handler: postSetup },
   { method: "GET", path: "/dashboard", handler: getDashboard },
+  { method: "GET", path: "/organizations", handler: getOrganizations },
+  { method: "POST", path: "/organizations", handler: postOrganizations },
+  { method: "POST", path: "/organizations/switch", handler: postOrganizationSwitch },
   { method: "GET", path: "/accounts", handler: getAccounts },
   { method: "POST", path: "/accounts", handler: postAccounts },
   { method: "GET", path: "/funds", handler: getFunds },
@@ -190,6 +203,69 @@ async function postSetup(request: Request, env: Env): Promise<Response> {
 
   const login = await attemptLogin(env, result.data.email, result.data.password, shouldUseSecureCookie(request));
   return redirect("/dashboard", login?.cookie);
+}
+
+async function getOrganizations(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const organizations = await listUserOrganizations(env, context.user.id);
+  return organizationsPage(env.APP_NAME, context, organizations);
+}
+
+async function postOrganizations(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const result = validateOrganizationWorkspace(form);
+  const organizations = await listUserOrganizations(env, context.user.id);
+  if (!result.ok) return organizationsPage(env.APP_NAME, context, organizations, result.errors);
+
+  const organizationId = randomId("org");
+  try {
+    await env.DB.batch([
+      env.DB.prepare(
+        "INSERT INTO organizations (id, name, fiscal_year_start_month, base_currency, organization_profile) VALUES (?, ?, ?, ?, ?)"
+      ).bind(organizationId, result.data.organizationName, result.data.fiscalYearStartMonth, "USD", result.data.organizationProfile),
+      env.DB.prepare(
+        "INSERT INTO organization_members (organization_id, user_id, role) VALUES (?, ?, ?)"
+      ).bind(organizationId, context.user.id, "owner"),
+      env.DB.prepare(
+        "INSERT INTO funds (id, organization_id, name) VALUES (?, ?, ?)"
+      ).bind(`fund_${organizationId}`, organizationId, "General Fund")
+    ]);
+  } catch (error) {
+    return organizationsPage(env.APP_NAME, context, organizations, {
+      organizationName: "That organization could not be created."
+    });
+  }
+
+  await switchOrganization(env, context, organizationId);
+  return redirect("/dashboard");
+}
+
+async function postOrganizationSwitch(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const organizationId = String(form.get("organizationId") ?? "");
+  const switched = await switchOrganization(env, context, organizationId);
+  if (!switched) {
+    const organizations = await listUserOrganizations(env, context.user.id);
+    return organizationsPage(env.APP_NAME, context, organizations, {
+      organizationId: "Choose one of your organizations."
+    });
+  }
+
+  return redirect("/dashboard");
 }
 
 async function getDashboard(request: Request, env: Env): Promise<Response> {

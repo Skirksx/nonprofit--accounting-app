@@ -45,6 +45,27 @@ export function validateSetup(form: FormData): ValidationResult<{
   return finish(errors, { organizationName, organizationProfile, fiscalYearStartMonth, name, email, password });
 }
 
+export function validateOrganizationWorkspace(form: FormData): ValidationResult<{
+  organizationName: string;
+  organizationProfile: OrganizationProfile;
+  fiscalYearStartMonth: number;
+}> {
+  const organizationName = stringValue(form, "organizationName");
+  const organizationProfile = stringValue(form, "organizationProfile") as OrganizationProfile;
+  const fiscalYearStartMonth = Number(stringValue(form, "fiscalYearStartMonth"));
+  const errors: Record<string, string> = {};
+
+  if (organizationName.length < 2) errors.organizationName = "Organization name is required.";
+  if (!["church", "rotary"].includes(organizationProfile)) {
+    errors.organizationProfile = "Choose church or Rotary.";
+  }
+  if (!Number.isInteger(fiscalYearStartMonth) || fiscalYearStartMonth < 1 || fiscalYearStartMonth > 12) {
+    errors.fiscalYearStartMonth = "Choose a valid fiscal year start month.";
+  }
+
+  return finish(errors, { organizationName, organizationProfile, fiscalYearStartMonth });
+}
+
 export function validateAccount(form: FormData): ValidationResult<{
   accountNumber: string;
   accountName: string;

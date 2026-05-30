@@ -32,6 +32,7 @@ CREATE TABLE organization_members (
 CREATE TABLE sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  current_organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
   csrf_token TEXT NOT NULL,
   expires_at TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

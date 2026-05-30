@@ -1,4 +1,5 @@
 import type { ChartAccount } from "./accounts.ts";
+import type { UserOrganization } from "./auth.ts";
 import type { JournalEntrySummary } from "./journalEntries.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
@@ -31,6 +32,7 @@ export function layout(options: {
         <a href="/funds">Funds</a>
         <a href="/accounts">Chart of accounts</a>
         <a href="/reports/statement-of-activities">Reports</a>
+        <a href="/organizations">Organizations</a>
         <a href="/settings">Settings</a>
         <form method="post" action="/logout">
           <input type="hidden" name="csrfToken" value="${escapeHtml(options.context.csrfToken)}">
@@ -141,6 +143,73 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
           <a href="/transactions/new">Income and expenses</a>
           <a href="/reports/statement-of-activities">Financial reports</a>
         </div>
+      </section>`
+  });
+}
+
+export function organizationsPage(
+  appName: string,
+  context: AuthContext,
+  organizations: UserOrganization[],
+  errors: Record<string, string> = {}
+): Response {
+  const rows = organizations.length
+    ? organizations
+        .map((organization) => {
+          const isCurrent = organization.id === context.organization.id;
+          return `<tr>
+            <td>${escapeHtml(organization.name)}</td>
+            <td>${formatOrganizationProfile(organization.organization_profile)}</td>
+            <td>${formatStatus(organization.role)}</td>
+            <td>${isCurrent ? "Current" : `<form method="post" action="/organizations/switch">
+              <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+              <input type="hidden" name="organizationId" value="${escapeHtml(organization.id)}">
+              <button class="small-button" type="submit">Open</button>
+            </form>`}</td>
+          </tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="4" class="empty">No organizations found.</td></tr>`;
+
+  return layout({
+    title: "Organizations",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.user.name)}</p>
+        <h1>Organizations</h1>
+        <p class="muted">Keep separate books for each organization while using the same sign-in.</p>
+      </section>
+      ${errors.organizationId ? `<p class="alert">${escapeHtml(errors.organizationId)}</p>` : ""}
+      <section class="split">
+        <section class="content-band">
+          <h2>Your organizations</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Type</th><th>Your role</th><th>Open</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </section>
+        <form method="post" action="/organizations" class="form-card">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <h2>Add organization</h2>
+          ${field("Organization name", "organizationName", "text", errors.organizationName, "Rotary Club")}
+          <label>Organization type
+            <select name="organizationProfile">
+              <option value="church">Church</option>
+              <option value="rotary">Rotary / service club</option>
+            </select>
+            ${errorText(errors.organizationProfile)}
+          </label>
+          <label>Fiscal year starts
+            <select name="fiscalYearStartMonth">
+              ${monthOptions()}
+            </select>
+            ${errorText(errors.fiscalYearStartMonth)}
+          </label>
+          <button type="submit">Create and open</button>
+        </form>
       </section>`
   });
 }
@@ -1229,6 +1298,10 @@ function formatFilingStatus(status: string): string {
 
 function formatStatus(status: string): string {
   return status[0].toUpperCase() + status.slice(1);
+}
+
+function formatOrganizationProfile(profile: string): string {
+  return profile === "rotary" ? "Rotary / service club" : "Church";
 }
 
 function centsInputValue(amountCents: number): string {

@@ -152,6 +152,7 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      current_organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL,
       csrf_token TEXT NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -278,6 +279,12 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
 
   try {
     await pool.query("ALTER TABLE organizations ADD COLUMN organization_profile TEXT NOT NULL DEFAULT 'church' CHECK (organization_profile IN ('church', 'rotary'))");
+  } catch (error) {
+    if (!String(error).includes("already exists")) throw error;
+  }
+
+  try {
+    await pool.query("ALTER TABLE sessions ADD COLUMN current_organization_id TEXT REFERENCES organizations(id) ON DELETE SET NULL");
   } catch (error) {
     if (!String(error).includes("already exists")) throw error;
   }

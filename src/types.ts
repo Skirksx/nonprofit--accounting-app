@@ -35,6 +35,7 @@ export type AuthContext = {
   organization: Organization;
   role: Role;
   csrfToken: string;
+  sessionId: string;
 };
 
 export type RouteHandler = (

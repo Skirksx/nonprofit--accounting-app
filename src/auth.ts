@@ -1,5 +1,5 @@
 import { randomId, verifyPassword } from "./crypto.ts";
-import type { AuthContext, Env, Role, User } from "./types.ts";
+import type { AuthContext, Env, OrganizationProfile, Role, User } from "./types.ts";
 
 const SESSION_COOKIE = "np_session";
 const SESSION_DAYS = 7;
@@ -14,6 +14,13 @@ type StoredUser = User & {
   password_hash: string;
   password_salt: string;
   password_iterations: number;
+};
+
+export type UserOrganization = {
+  id: string;
+  name: string;
+  role: Role;
+  organization_profile: OrganizationProfile;
 };
 
 export async function attemptLogin(
@@ -42,11 +49,21 @@ export async function attemptLogin(
   const sessionId = randomId("ses");
   const csrfToken = randomId("csrf");
   const expiresAt = sqlTimestamp(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  const firstOrganization = await env.DB.prepare(
+    `SELECT organizations.id
+     FROM organization_members
+     JOIN organizations ON organizations.id = organization_members.organization_id
+     WHERE organization_members.user_id = ?
+     ORDER BY organization_members.created_at ASC
+     LIMIT 1`
+  )
+    .bind(user.id)
+    .first<{ id: string }>();
 
   await env.DB.prepare(
-    "INSERT INTO sessions (id, user_id, csrf_token, expires_at) VALUES (?, ?, ?, ?)"
+    "INSERT INTO sessions (id, user_id, current_organization_id, csrf_token, expires_at) VALUES (?, ?, ?, ?, ?)"
   )
-    .bind(sessionId, user.id, csrfToken, expiresAt)
+    .bind(sessionId, user.id, firstOrganization?.id ?? null, csrfToken, expiresAt)
     .run();
 
   return {
@@ -77,7 +94,12 @@ export async function requireAuth(request: Request, env: Env): Promise<AuthConte
     JOIN users ON users.id = sessions.user_id
     JOIN organization_members ON organization_members.user_id = users.id
     JOIN organizations ON organizations.id = organization_members.organization_id
-    WHERE sessions.id = ? AND sessions.expires_at > CURRENT_TIMESTAMP
+    WHERE sessions.id = ?
+      AND sessions.expires_at > CURRENT_TIMESTAMP
+      AND (
+        sessions.current_organization_id IS NULL
+        OR organization_members.organization_id = sessions.current_organization_id
+      )
     ORDER BY organization_members.created_at ASC
     LIMIT 1`
   )
@@ -113,8 +135,47 @@ export async function requireAuth(request: Request, env: Env): Promise<AuthConte
       logo_data_url: context.logo_data_url
     },
     role: context.role,
-    csrfToken: context.csrf_token
+    csrfToken: context.csrf_token,
+    sessionId
   };
+}
+
+export async function listUserOrganizations(env: Env, userId: string): Promise<UserOrganization[]> {
+  const result = await env.DB.prepare(
+    `SELECT
+      organizations.id,
+      organizations.name,
+      organization_members.role,
+      COALESCE(organizations.organization_profile, 'church') AS organization_profile
+     FROM organization_members
+     JOIN organizations ON organizations.id = organization_members.organization_id
+     WHERE organization_members.user_id = ?
+     ORDER BY organization_members.created_at ASC`
+  )
+    .bind(userId)
+    .all<UserOrganization>();
+
+  return result.results ?? [];
+}
+
+export async function switchOrganization(
+  env: Env,
+  context: AuthContext,
+  organizationId: string
+): Promise<boolean> {
+  const membership = await env.DB.prepare(
+    "SELECT organization_id FROM organization_members WHERE user_id = ? AND organization_id = ?"
+  )
+    .bind(context.user.id, organizationId)
+    .first<{ organization_id: string }>();
+
+  if (!membership) return false;
+
+  await env.DB.prepare("UPDATE sessions SET current_organization_id = ? WHERE id = ? AND user_id = ?")
+    .bind(organizationId, context.sessionId, context.user.id)
+    .run();
+
+  return true;
 }
 
 export function requireRole(context: AuthContext, minimumRole: Role): Response | null {
