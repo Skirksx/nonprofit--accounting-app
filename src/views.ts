@@ -542,7 +542,20 @@ export function fundsPage(
           (fund) => `<tr>
             <td><a href="/funds/detail?id=${encodeURIComponent(fund.id)}">${escapeHtml(fund.name)}</a></td>
             <td>${formatStatus(fund.status)}</td>
-            <td><a class="button-like small-button" href="/funds/detail?id=${encodeURIComponent(fund.id)}">View report</a></td>
+            <td class="budget-actions">
+              <a class="button-like small-button" href="/funds/detail?id=${encodeURIComponent(fund.id)}">View report</a>
+              <form method="post" action="/funds/update" class="table-edit-form">
+                <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+                <input type="hidden" name="fundId" value="${escapeHtml(fund.id)}">
+                <input name="name" type="text" value="${escapeHtml(fund.name)}" required>
+                <button class="small-button" type="submit">Rename</button>
+              </form>
+              <form method="post" action="/funds/delete" class="table-edit-form">
+                <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+                <input type="hidden" name="fundId" value="${escapeHtml(fund.id)}">
+                <button class="danger-button small-button" type="submit">Remove</button>
+              </form>
+            </td>
           </tr>`
         )
         .join("")
@@ -574,7 +587,7 @@ export function fundsPage(
   });
 }
 
-export function fundDetailPage(appName: string, context: AuthContext, report: FundActivityReport): Response {
+export function fundDetailPage(appName: string, context: AuthContext, report: FundActivityReport, funds: Fund[]): Response {
   const rows = report.rows.length
     ? report.rows
         .map(
@@ -587,10 +600,21 @@ export function fundDetailPage(appName: string, context: AuthContext, report: Fu
             <td class="amount">${row.account_type === "revenue" ? formatMoney(row.amount_cents) : ""}</td>
             <td class="amount">${row.account_type === "expense" ? formatMoney(row.amount_cents) : ""}</td>
             <td class="amount">${formatMoney(row.running_balance_cents)}</td>
+            <td>
+              <form method="post" action="/funds/activity/update" class="table-edit-form">
+                <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+                <input type="hidden" name="lineId" value="${escapeHtml(row.line_id)}">
+                <input type="hidden" name="returnFundId" value="${escapeHtml(report.fund.id)}">
+                <select name="fundId">
+                  ${fundOptions(funds, report.fund.id)}
+                </select>
+                <button class="small-button" type="submit">Move</button>
+              </form>
+            </td>
           </tr>`
         )
         .join("")
-    : `<tr><td colspan="8" class="empty">No posted revenue or expense activity for this fund yet.</td></tr>`;
+    : `<tr><td colspan="9" class="empty">No posted revenue or expense activity for this fund yet.</td></tr>`;
 
   return layout({
     title: `${report.fund.name} Fund`,
@@ -613,7 +637,7 @@ export function fundDetailPage(appName: string, context: AuthContext, report: Fu
         </div>
         <div class="table-wrap report-table">
           <table>
-            <thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Account</th><th>Type</th><th>Income</th><th>Expense</th><th>Running balance</th></tr></thead>
+            <thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Account</th><th>Type</th><th>Income</th><th>Expense</th><th>Running balance</th><th>Correct fund</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
