@@ -28,7 +28,7 @@ export function layout(options: {
     ? `<nav class="nav">
         <a href="/dashboard">Dashboard</a>
         <a href="/transactions/new">New transaction</a>
-        <a href="/journal-entries/new">Journal entries</a>
+        <a href="/journal-entries/new">Advanced ledger</a>
         ${payrollLink}
         <a href="/funds">Funds</a>
         <a href="/accounts">Chart of accounts</a>
@@ -141,8 +141,8 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
         <h2>${escapeHtml(profile.moduleTitle)}</h2>
         <div class="task-list">
           ${profile.tasks.map((task) => `<a href="${escapeHtml(task.href)}">${escapeHtml(task.label)}</a>`).join("")}
-          <a href="/journal-entries/new">Journal entries</a>
           <a href="/transactions/new">Income and expenses</a>
+          <a href="/journal-entries/new">Advanced ledger</a>
           <a href="/reports/statement-of-activities">Financial reports</a>
         </div>
       </section>`
@@ -666,7 +666,7 @@ export function transactionEntryPage(
     body: `<section class="page-heading">
         <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
         <h1>Enter income or expense</h1>
-        <p class="muted">Simple entries are posted as balanced journal entries behind the scenes.</p>
+        <p class="muted">Enter one amount and category. The app handles the ledger details behind the scenes.</p>
       </section>
       <form method="post" action="/transactions" class="grid-form">
         <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
@@ -683,13 +683,13 @@ export function transactionEntryPage(
           <input name="amount" type="number" min="0.01" step="0.01" placeholder="125.00" required>
           ${errorText(errors.amount)}
         </label>
-        <label>Cash or bank account
+        <label>Money account
           <select name="cashAccountId">
             ${accountOptions(cashAccounts, "No active asset or liability accounts")}
           </select>
           ${errorText(errors.cashAccountId)}
         </label>
-        <label>Income or expense account
+        <label>Category
           <select name="categoryAccountId">
             ${accountOptions(categoryAccounts, "No active income or expense accounts")}
           </select>
@@ -736,13 +736,13 @@ export function journalEntryPage(
     : `<tr><td colspan="7" class="empty">No journal entries yet.</td></tr>`;
 
   return layout({
-    title: "Journal entries",
+    title: "Advanced ledger",
     appName,
     context,
     body: `<section class="page-heading">
         <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
-        <h1>Journal entries</h1>
-        <p class="muted">Create manual balanced entries. Total debits must equal total credits before posting.</p>
+        <h1>Advanced ledger</h1>
+        <p class="muted">For regular income and expenses, use New transaction so you only enter one amount. Use this page only for manual accounting adjustments.</p>
       </section>
       <form method="post" action="/journal-entries" class="grid-form">
         <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
@@ -756,7 +756,7 @@ export function journalEntryPage(
         </div>
       </form>
       <section class="content-band report-section">
-        <h2>Recent journal entries</h2>
+        <h2>Recent ledger entries</h2>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Entry</th><th>Date</th><th>Description</th><th>Status</th><th>Debits</th><th>Credits</th><th>Actions</th></tr></thead>
