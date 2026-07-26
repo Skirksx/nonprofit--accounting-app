@@ -1069,13 +1069,13 @@ export function budgetPage(
     body: `<section class="page-heading">
         <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
         <h1>Budget</h1>
-        <p class="muted">Add, edit, and remove annual budget lines for income and expenses.</p>
+        <p class="muted">Update the annual Rotary budget, save changes, and print the latest budget PDF.</p>
       </section>
       <section class="split">
         <form method="get" action="/budget" class="form-card">
           ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(fiscalYear), "2026")}
           <div class="form-actions">
-            <a class="button-like" href="/budget/report.pdf?fiscalYear=${encodeURIComponent(String(fiscalYear))}">Download budget PDF</a>
+            <a class="button-like" href="/budget/report.pdf?fiscalYear=${encodeURIComponent(String(fiscalYear))}">Print budget PDF</a>
             <button type="submit">Open year</button>
           </div>
         </form>
@@ -1104,7 +1104,7 @@ export function budgetPage(
         </form>
       </section>
       <section class="content-band report-section budget-editor">
-        <h2>Budget lines</h2>
+        <h2>Editable budget lines</h2>
         ${errors.budgetLineId ? `<p class="alert">${escapeHtml(errors.budgetLineId)}</p>` : ""}
         ${budgetLineTable(budgetLines, budgetAccounts, funds, context.csrfToken)}
       </section>`
@@ -1539,7 +1539,8 @@ function organizationProfileContent(context: AuthContext): {
       tasks: [
         { href: "/funds", label: "Service projects and grants" },
         { href: "/transactions/new", label: "Dues and event income" },
-        { href: "/reports/budget-vs-actual", label: "Project budget vs actual" }
+        { href: "/budget", label: "Edit and print budget" },
+        { href: "/reports/budget-vs-actual", label: "Budget vs actual" }
       ]
     };
   }
