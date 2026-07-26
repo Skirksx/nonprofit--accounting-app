@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import type { Pool, PoolClient, QueryResultRow } from "pg";
 
+import { getAccountRegister, getAccountRegisterCsv } from "./accountRegisterReport.ts";
 import worker from "./index.ts";
 import { getDatabasePool } from "./database.ts";
 import type { Env } from "./types.ts";
@@ -294,7 +295,7 @@ export function createRenderServer(env: Env) {
   return createServer(async (incoming, outgoing) => {
     try {
       const request = await nodeRequestToFetchRequest(incoming);
-      const response = await worker.fetch(request, env);
+      const response = await renderResponse(request, env);
       const headers: Record<string, string> = {};
       response.headers.forEach((value, key) => {
         headers[key] = value;
@@ -307,6 +308,17 @@ export function createRenderServer(env: Env) {
       outgoing.end("Something went wrong");
     }
   });
+}
+
+async function renderResponse(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  if (request.method === "GET" && url.pathname === "/reports/account-register") {
+    return getAccountRegister(request, env);
+  }
+  if (request.method === "GET" && url.pathname === "/reports/account-register.csv") {
+    return getAccountRegisterCsv(request, env);
+  }
+  return worker.fetch(request, env);
 }
 
 export async function startRenderServer(): Promise<void> {
