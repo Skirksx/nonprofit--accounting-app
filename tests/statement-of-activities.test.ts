@@ -6,6 +6,7 @@ import {
   budgetReport,
   budgetVsActual,
   createBudgetReportPdf,
+  createIncomeStatementReportPdf,
   incomeStatement,
   listBudgetLines,
   listFunds,
@@ -187,6 +188,44 @@ test("builds an income statement from posted journal activity", async () => {
   assert.equal(report.totalRevenueCents, 125000);
   assert.equal(report.totalExpenseCents, 40000);
   assert.equal(report.netIncomeCents, 85000);
+});
+
+test("creates an income statement PDF with the Rotary report style", async () => {
+  const report = {
+    filters: {
+      organizationId: "org_1",
+      startDate: "2025-07-01",
+      endDate: "2026-06-30"
+    },
+    revenues: [
+      {
+        account_id: "acct_revenue",
+        account_number: "4000",
+        account_name: "Member Dues",
+        account_type: "revenue" as const,
+        amount_cents: 416000
+      }
+    ],
+    expenses: [
+      {
+        account_id: "acct_expense",
+        account_number: "5100",
+        account_name: "College Scholarships",
+        account_type: "expense" as const,
+        amount_cents: 400000
+      }
+    ],
+    totalRevenueCents: 416000,
+    totalExpenseCents: 400000,
+    netIncomeCents: 16000
+  };
+
+  const pdf = Buffer.from(createIncomeStatementReportPdf(report, "Malta & McConnelsville Rotary Club"));
+  const text = new TextDecoder().decode(pdf);
+
+  assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
+  assert.match(text, /INCOME STATEMENT/);
+  assert.match(text, /NET INCOME/);
 });
 
 test("builds statement of activities from posted journal lines", async () => {
