@@ -367,7 +367,7 @@ export async function listFunds(env: Env, organizationId: string): Promise<Fund[
   const result = await env.DB.prepare(
     `SELECT id, organization_id, name, status
      FROM funds
-     WHERE organization_id = ?
+     WHERE organization_id = ? AND status = 'active'
      ORDER BY name ASC`
   )
     .bind(organizationId)
