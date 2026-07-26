@@ -45,6 +45,7 @@ import {
   budgetVsActual,
   createBudgetReportPdf,
   createBudgetLine,
+  createIncomeStatementReportPdf,
   createFund,
   deleteBudgetLine,
   incomeStatement,
@@ -136,6 +137,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
   { method: "GET", path: "/reports/income-statement", handler: getIncomeStatement },
+  { method: "GET", path: "/reports/income-statement.pdf", handler: getIncomeStatementPdf },
   { method: "GET", path: "/reports/budget-vs-actual", handler: getBudgetVsActual },
   { method: "POST", path: "/reports/budget-lines", handler: postBudgetLines },
   { method: "GET", path: "/reports/statement-of-activities", handler: getStatementOfActivities },
@@ -913,6 +915,25 @@ async function getIncomeStatement(request: Request, env: Env): Promise<Response>
 
   const report = await incomeStatement(env, filters);
   return incomeStatementPage(env.APP_NAME, context, funds, report);
+}
+
+async function getIncomeStatementPdf(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const url = new URL(request.url);
+  const filters = parseFinancialReportFilters(url, context.organization.id);
+  if ("errors" in filters) return redirect("/reports/income-statement");
+
+  const report = await incomeStatement(env, filters);
+  const pdf = createIncomeStatementReportPdf(report, context.organization.name);
+  return new Response(pdf, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="income-statement.pdf"`,
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
 }
 
 async function getBudgetVsActual(request: Request, env: Env): Promise<Response> {
