@@ -11,6 +11,7 @@ export type Fund = {
 };
 
 export type FundActivityRow = {
+  line_id: string;
   entry_id: string;
   entry_number: string;
   entry_date: string;
@@ -383,12 +384,55 @@ export async function createFund(env: Env, organizationId: string, name: string)
     .run();
 }
 
+export async function updateFundName(env: Env, organizationId: string, fundId: string, name: string): Promise<void> {
+  await env.DB.prepare(
+    "UPDATE funds SET name = ?, status = 'active', updated_at = CURRENT_TIMESTAMP WHERE organization_id = ? AND id = ?"
+  )
+    .bind(name.trim(), organizationId, fundId)
+    .run();
+}
+
+export async function removeFund(env: Env, organizationId: string, fundId: string): Promise<void> {
+  const references = await env.DB.prepare(
+    `SELECT
+      (
+        SELECT COUNT(*) FROM journal_entry_lines WHERE organization_id = ? AND fund_id = ?
+      ) + (
+        SELECT COUNT(*) FROM budget_lines WHERE organization_id = ? AND fund_id = ?
+      ) AS reference_count`
+  )
+    .bind(organizationId, fundId, organizationId, fundId)
+    .first<{ reference_count: number }>();
+
+  if (Number(references?.reference_count ?? 0) > 0) {
+    await env.DB.prepare("UPDATE funds SET status = 'inactive', updated_at = CURRENT_TIMESTAMP WHERE organization_id = ? AND id = ?")
+      .bind(organizationId, fundId)
+      .run();
+    return;
+  }
+
+  await env.DB.prepare("DELETE FROM funds WHERE organization_id = ? AND id = ?")
+    .bind(organizationId, fundId)
+    .run();
+}
+
+export async function updateFundActivityLine(env: Env, organizationId: string, lineId: string, fundId: string): Promise<void> {
+  await env.DB.prepare(
+    `UPDATE journal_entry_lines
+     SET fund_id = ?, updated_at = CURRENT_TIMESTAMP
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(fundId, organizationId, lineId)
+    .run();
+}
+
 export async function fundActivityReport(env: Env, organizationId: string, fundId: string): Promise<FundActivityReport | null> {
   const fund = await getFund(env, organizationId, fundId);
   if (!fund) return null;
 
   const result = await env.DB.prepare(
     `SELECT
+      journal_entry_lines.id AS line_id,
       journal_entries.id AS entry_id,
       journal_entries.entry_number,
       journal_entries.entry_date,
