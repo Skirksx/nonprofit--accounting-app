@@ -6,7 +6,6 @@ import type { Pool, PoolClient, QueryResultRow } from "pg";
 import { getAccountRegister, getAccountRegisterCsv } from "./accountRegisterReport.ts";
 import { getDatabasePool } from "./database.ts";
 import worker from "./index.ts";
-import { ensurePostgresSchema, resolvePort } from "./renderServer.ts";
 import type { Env } from "./types.ts";
 
 type PgExecutor = Pool | PoolClient;
@@ -76,7 +75,6 @@ class AccountRegisterPgD1Statement {
 
 export async function startAccountRegisterServer(): Promise<void> {
   const pool = getDatabasePool();
-  await ensurePostgresSchema(pool);
   const env = {
     DB: new AccountRegisterPgD1Database(pool) as unknown as Env["DB"],
     APP_NAME: process.env.APP_NAME ?? "Nonprofit Ledger"
@@ -146,6 +144,11 @@ async function readRequestBody(incoming: IncomingMessage): Promise<ArrayBuffer |
 function convertPlaceholders(sql: string): string {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+function resolvePort(env: NodeJS.ProcessEnv = process.env): number {
+  const port = Number(env.PORT);
+  return Number.isInteger(port) && port > 0 ? port : 3000;
 }
 
 function normalizeRow<T extends QueryResultRow>(row: T): T {
