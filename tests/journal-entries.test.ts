@@ -142,6 +142,8 @@ test("posts a balanced draft journal entry", async () => {
 
   await postJournalEntry(env, "org_1", "je_1");
 
+  assert.match(env.calls[1].sql, /AS "debitAmountCents"/);
+  assert.match(env.calls[1].sql, /AS "creditAmountCents"/);
   const updateCall = env.calls.at(-1);
   assert.ok(updateCall);
   assert.match(updateCall.sql, /UPDATE journal_entries/);
