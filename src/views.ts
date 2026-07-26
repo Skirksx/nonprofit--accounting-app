@@ -951,6 +951,7 @@ export function incomeStatementPage(
           </select>
         </label>
         <div class="form-actions">
+          ${report ? `<a class="button-like" href="${escapeHtml(incomeStatementPdfUrl(report))}">Print income statement PDF</a>` : ""}
           <button type="submit">Run report</button>
         </div>
       </form>
@@ -1477,6 +1478,15 @@ function reportNav(): string {
     <a href="/budget">Budget</a>
     <a href="/reports/budget-vs-actual">Budget vs Actual</a>
   </nav>`;
+}
+
+function incomeStatementPdfUrl(report: IncomeStatementReport): string {
+  const params = new URLSearchParams();
+  if (report.filters.startDate) params.set("startDate", report.filters.startDate);
+  if (report.filters.endDate) params.set("endDate", report.filters.endDate);
+  if (report.filters.fundId) params.set("fundId", report.filters.fundId);
+  const query = params.toString();
+  return `/reports/income-statement.pdf${query ? `?${query}` : ""}`;
 }
 
 function reportTotal(label: string, amountCents: number): string {
