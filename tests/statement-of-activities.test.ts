@@ -106,6 +106,7 @@ test("lists funds by organization", async () => {
   assert.equal(funds.length, 1);
   assert.equal(funds[0].name, "General Fund");
   assert.match(env.calls[0].sql, /FROM funds/);
+  assert.match(env.calls[0].sql, /status = 'active'/);
   assert.deepEqual(env.calls[0].bindings, ["org_1"]);
 });
 
