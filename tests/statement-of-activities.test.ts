@@ -7,6 +7,8 @@ import {
   budgetVsActual,
   createBudgetReportPdf,
   createIncomeStatementReportPdf,
+  fundActivityCsv,
+  fundActivityReport,
   incomeStatement,
   listBudgetLines,
   listFunds,
@@ -105,6 +107,88 @@ test("lists funds by organization", async () => {
   assert.equal(funds[0].name, "General Fund");
   assert.match(env.calls[0].sql, /FROM funds/);
   assert.deepEqual(env.calls[0].bindings, ["org_1"]);
+});
+
+test("builds fund activity with income, expenses, and running balance", async () => {
+  const env = mockEnv({
+    firstResults: [
+      {
+        id: "fund_front",
+        organization_id: "org_1",
+        name: "Front Street Fest",
+        status: "active"
+      }
+    ],
+    allResults: [
+      [
+        {
+          entry_id: "je_1",
+          entry_number: "JE-0001",
+          entry_date: "2026-07-01",
+          entry_description: "Income: Front Street Fest sponsor check",
+          line_description: "Front Street Fest sponsor check",
+          account_number: "4000",
+          account_name: "Event Income",
+          account_type: "revenue",
+          amount_cents: 250000
+        },
+        {
+          entry_id: "je_2",
+          entry_number: "JE-0002",
+          entry_date: "2026-07-05",
+          entry_description: "Expense: Front Street Fest supplies",
+          line_description: "Front Street Fest supplies",
+          account_number: "5100",
+          account_name: "Event Supplies",
+          account_type: "expense",
+          amount_cents: 40000
+        }
+      ]
+    ]
+  });
+
+  const report = await fundActivityReport(env, "org_1", "fund_front");
+
+  assert.ok(report);
+  assert.equal(report.fund.name, "Front Street Fest");
+  assert.equal(report.totalIncomeCents, 250000);
+  assert.equal(report.totalExpenseCents, 40000);
+  assert.equal(report.balanceCents, 210000);
+  assert.equal(report.rows[0].running_balance_cents, 250000);
+  assert.equal(report.rows[1].running_balance_cents, 210000);
+});
+
+test("exports fund activity to CSV", async () => {
+  const csv = fundActivityCsv({
+    fund: {
+      id: "fund_front",
+      organization_id: "org_1",
+      name: "Front Street Fest",
+      status: "active"
+    },
+    totalIncomeCents: 250000,
+    totalExpenseCents: 40000,
+    balanceCents: 210000,
+    rows: [
+      {
+        entry_id: "je_1",
+        entry_number: "JE-0001",
+        entry_date: "2026-07-01",
+        entry_description: "Income: Front Street Fest sponsor check",
+        line_description: "Front Street Fest sponsor check",
+        account_number: "4000",
+        account_name: "Event Income",
+        account_type: "revenue",
+        amount_cents: 250000,
+        balance_effect_cents: 250000,
+        running_balance_cents: 250000
+      }
+    ]
+  });
+
+  assert.match(csv, /^date,entry_number,description,account,type,income,expense,balance_effect,running_balance/);
+  assert.match(csv, /Front Street Fest sponsor check/);
+  assert.match(csv, /2500.00/);
 });
 
 test("builds a balance sheet from posted journal balances", async () => {
@@ -438,11 +522,13 @@ function account(
 
 function mockEnv(options: {
   allResults?: unknown[][];
+  firstResults?: unknown[];
 } = {}): Env & {
   calls: Array<{ sql: string; bindings: unknown[] }>;
 } {
   const calls: Array<{ sql: string; bindings: unknown[] }> = [];
   let allIndex = 0;
+  let firstIndex = 0;
 
   return {
     APP_NAME: "Test Ledger",
@@ -461,6 +547,11 @@ function mockEnv(options: {
             const results = options.allResults?.[allIndex] ?? [];
             allIndex += 1;
             return { results };
+          },
+          async first() {
+            const result = options.firstResults?.[firstIndex] ?? null;
+            firstIndex += 1;
+            return result;
           },
           async run() {
             return { success: true };
