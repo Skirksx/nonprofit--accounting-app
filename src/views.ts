@@ -9,6 +9,7 @@ import type {
   BudgetVsActualRow,
   FinancialReportRow,
   Fund,
+  FundActivityReport,
   IncomeStatementReport,
   StatementOfActivitiesReport,
   StatementOfActivitiesRow
@@ -539,9 +540,9 @@ export function fundsPage(
     ? funds
         .map(
           (fund) => `<tr>
-            <td>${escapeHtml(fund.name)}</td>
+            <td><a href="/funds/detail?id=${encodeURIComponent(fund.id)}">${escapeHtml(fund.name)}</a></td>
             <td>${formatStatus(fund.status)}</td>
-            <td>${escapeHtml(fund.organization_id)}</td>
+            <td><a class="button-like small-button" href="/funds/detail?id=${encodeURIComponent(fund.id)}">View report</a></td>
           </tr>`
         )
         .join("")
@@ -565,7 +566,54 @@ export function fundsPage(
         </form>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Status</th><th>Organization ID</th></tr></thead>
+            <thead><tr><th>Name</th><th>Status</th><th>Report</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </section>`
+  });
+}
+
+export function fundDetailPage(appName: string, context: AuthContext, report: FundActivityReport): Response {
+  const rows = report.rows.length
+    ? report.rows
+        .map(
+          (row) => `<tr>
+            <td>${escapeHtml(row.entry_date)}</td>
+            <td>${escapeHtml(row.entry_number)}</td>
+            <td>${escapeHtml(row.line_description || row.entry_description)}</td>
+            <td>${escapeHtml(`${row.account_number} - ${row.account_name}`)}</td>
+            <td>${formatAccountType(row.account_type)}</td>
+            <td class="amount">${row.account_type === "revenue" ? formatMoney(row.amount_cents) : ""}</td>
+            <td class="amount">${row.account_type === "expense" ? formatMoney(row.amount_cents) : ""}</td>
+            <td class="amount">${formatMoney(row.running_balance_cents)}</td>
+          </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="8" class="empty">No posted revenue or expense activity for this fund yet.</td></tr>`;
+
+  return layout({
+    title: `${report.fund.name} Fund`,
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>${escapeHtml(report.fund.name)}</h1>
+        <p class="muted">Income increases this fund balance. Expenses assigned to this fund reduce it.</p>
+      </section>
+      <section class="metric-grid">
+        <article class="metric"><span>Income</span><strong>${formatMoney(report.totalIncomeCents)}</strong></article>
+        <article class="metric"><span>Expenses</span><strong>${formatMoney(report.totalExpenseCents)}</strong></article>
+        <article class="metric"><span>Fund balance</span><strong>${formatMoney(report.balanceCents)}</strong></article>
+      </section>
+      <section class="content-band report-section">
+        <div class="form-actions">
+          <a href="/funds">Back to funds</a>
+          <a class="button-like" href="/funds/detail.csv?id=${encodeURIComponent(report.fund.id)}">Download fund activity CSV</a>
+        </div>
+        <div class="table-wrap report-table">
+          <table>
+            <thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Account</th><th>Type</th><th>Income</th><th>Expense</th><th>Running balance</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
