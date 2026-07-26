@@ -57,7 +57,10 @@ import {
   parseBudgetVsActualFilters,
   parseFinancialReportFilters,
   parseStatementOfActivitiesFilters,
+  removeFund,
   statementOfActivities,
+  updateFundActivityLine,
+  updateFundName,
   updateBudgetLine,
   validateBudgetLineForm,
   validateBudgetLineUpdateForm
@@ -112,8 +115,11 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/accounts", handler: postAccounts },
   { method: "GET", path: "/funds", handler: getFunds },
   { method: "POST", path: "/funds", handler: postFunds },
+  { method: "POST", path: "/funds/update", handler: postFundUpdate },
+  { method: "POST", path: "/funds/delete", handler: postFundDelete },
   { method: "GET", path: "/funds/detail", handler: getFundDetail },
   { method: "GET", path: "/funds/detail.csv", handler: getFundDetailCsv },
+  { method: "POST", path: "/funds/activity/update", handler: postFundActivityUpdate },
   { method: "GET", path: "/budget", handler: getBudget },
   { method: "POST", path: "/budget", handler: postBudget },
   { method: "POST", path: "/budget/update", handler: postBudgetUpdate },
@@ -383,15 +389,53 @@ async function postFunds(request: Request, env: Env): Promise<Response> {
   return redirect("/funds");
 }
 
+async function postFundUpdate(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const fundId = String(form.get("fundId") ?? "");
+  const name = String(form.get("name") ?? "").trim();
+  if (fundId && name.length >= 2) await updateFundName(env, context.organization.id, fundId, name);
+
+  return redirect("/funds");
+}
+
+async function postFundDelete(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const fundId = String(form.get("fundId") ?? "");
+  if (fundId) await removeFund(env, context.organization.id, fundId);
+
+  return redirect("/funds");
+}
+
 async function getFundDetail(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
   const fundId = new URL(request.url).searchParams.get("id") ?? "";
-  const report = fundId ? await fundActivityReport(env, context.organization.id, fundId) : null;
+  const [report, funds] = await Promise.all([
+    fundId ? fundActivityReport(env, context.organization.id, fundId) : null,
+    listFunds(env, context.organization.id)
+  ]);
   if (!report) return redirect("/funds");
 
-  return fundDetailPage(env.APP_NAME, context, report);
+  return fundDetailPage(env.APP_NAME, context, report, funds);
 }
 
 async function getFundDetailCsv(request: Request, env: Env): Promise<Response> {
@@ -403,6 +447,25 @@ async function getFundDetailCsv(request: Request, env: Env): Promise<Response> {
   if (!report) return redirect("/funds");
 
   return csvResponse(fundActivityCsv(report), `${csvSafeFilename(report.fund.name)}-activity.csv`);
+}
+
+async function postFundActivityUpdate(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const lineId = String(form.get("lineId") ?? "");
+  const fundId = String(form.get("fundId") ?? "");
+  const returnFundId = String(form.get("returnFundId") ?? fundId);
+  if (lineId && fundId) await updateFundActivityLine(env, context.organization.id, lineId, fundId);
+
+  return redirect(`/funds/detail?id=${encodeURIComponent(returnFundId)}`);
 }
 
 async function getBudget(request: Request, env: Env): Promise<Response> {
