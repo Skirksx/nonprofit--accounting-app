@@ -10,6 +10,28 @@ export type Fund = {
   status: "active" | "inactive";
 };
 
+export type FundActivityRow = {
+  entry_id: string;
+  entry_number: string;
+  entry_date: string;
+  entry_description: string;
+  line_description: string;
+  account_number: string;
+  account_name: string;
+  account_type: "revenue" | "expense";
+  amount_cents: number;
+  balance_effect_cents: number;
+  running_balance_cents: number;
+};
+
+export type FundActivityReport = {
+  fund: Fund;
+  rows: FundActivityRow[];
+  totalIncomeCents: number;
+  totalExpenseCents: number;
+  balanceCents: number;
+};
+
 export type StatementOfActivitiesFilters = {
   organizationId: string;
   startDate?: string;
@@ -359,6 +381,83 @@ export async function createFund(env: Env, organizationId: string, name: string)
   )
     .bind(randomId("fund"), organizationId, name.trim())
     .run();
+}
+
+export async function fundActivityReport(env: Env, organizationId: string, fundId: string): Promise<FundActivityReport | null> {
+  const fund = await getFund(env, organizationId, fundId);
+  if (!fund) return null;
+
+  const result = await env.DB.prepare(
+    `SELECT
+      journal_entries.id AS entry_id,
+      journal_entries.entry_number,
+      journal_entries.entry_date,
+      journal_entries.description AS entry_description,
+      journal_entry_lines.description AS line_description,
+      accounts.account_number,
+      accounts.account_name,
+      accounts.account_type,
+      CASE
+        WHEN accounts.account_type = 'revenue'
+          THEN journal_entry_lines.credit_amount_cents - journal_entry_lines.debit_amount_cents
+        WHEN accounts.account_type = 'expense'
+          THEN journal_entry_lines.debit_amount_cents - journal_entry_lines.credit_amount_cents
+        ELSE 0
+      END AS amount_cents
+    FROM journal_entry_lines
+    JOIN journal_entries ON journal_entries.id = journal_entry_lines.journal_entry_id
+    JOIN accounts ON accounts.id = journal_entry_lines.account_id
+    WHERE journal_entries.organization_id = ?
+      AND journal_entries.status = 'posted'
+      AND journal_entry_lines.fund_id = ?
+      AND accounts.account_type IN ('revenue', 'expense')
+    ORDER BY journal_entries.entry_date ASC, journal_entries.entry_number ASC, journal_entry_lines.line_number ASC`
+  )
+    .bind(organizationId, fundId)
+    .all<Omit<FundActivityRow, "balance_effect_cents" | "running_balance_cents">>();
+
+  let runningBalanceCents = 0;
+  const rows = (result.results ?? []).map((row) => {
+    const balanceEffectCents = row.account_type === "revenue" ? row.amount_cents : -row.amount_cents;
+    runningBalanceCents += balanceEffectCents;
+    return {
+      ...row,
+      balance_effect_cents: balanceEffectCents,
+      running_balance_cents: runningBalanceCents
+    };
+  });
+
+  const totalIncomeCents = rows
+    .filter((row) => row.account_type === "revenue")
+    .reduce((total, row) => total + row.amount_cents, 0);
+  const totalExpenseCents = rows
+    .filter((row) => row.account_type === "expense")
+    .reduce((total, row) => total + row.amount_cents, 0);
+
+  return {
+    fund,
+    rows,
+    totalIncomeCents,
+    totalExpenseCents,
+    balanceCents: totalIncomeCents - totalExpenseCents
+  };
+}
+
+export function fundActivityCsv(report: FundActivityReport): string {
+  return toCsv(
+    ["date", "entry_number", "description", "account", "type", "income", "expense", "balance_effect", "running_balance"],
+    report.rows.map((row) => [
+      row.entry_date,
+      row.entry_number,
+      row.line_description || row.entry_description,
+      `${row.account_number} - ${row.account_name}`,
+      row.account_type,
+      row.account_type === "revenue" ? centsForCsv(row.amount_cents) : "",
+      row.account_type === "expense" ? centsForCsv(row.amount_cents) : "",
+      centsForCsv(row.balance_effect_cents),
+      centsForCsv(row.running_balance_cents)
+    ])
+  );
 }
 
 export async function balanceSheet(env: Env, filters: BalanceSheetFilters): Promise<BalanceSheetReport> {
@@ -789,6 +888,18 @@ function sumBudgetRows(rows: BudgetLineRecord[]): number {
   return rows.reduce((total, row) => total + row.amount_cents, 0);
 }
 
+async function getFund(env: Env, organizationId: string, fundId: string): Promise<Fund | null> {
+  const result = await env.DB.prepare(
+    `SELECT id, organization_id, name, status
+     FROM funds
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(organizationId, fundId)
+    .first<Fund>();
+
+  return result ?? null;
+}
+
 function budgetDescription(row: BudgetLineRecord): string {
   return row.account_name.replace(/\s+(Revenue|Expense)$/i, "");
 }
@@ -904,6 +1015,18 @@ function reportPeriodLabel(startDate?: string, endDate?: string): string {
   if (startDate) return `From ${startDate}`;
   if (endDate) return `Through ${endDate}`;
   return "All posted activity";
+}
+
+function centsForCsv(amountCents: number): string {
+  return (amountCents / 100).toFixed(2);
+}
+
+function toCsv(headers: string[], rows: string[][]): string {
+  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n") + "\n";
+}
+
+function csvCell(value: string): string {
+  return /[",\n\r]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
 }
 
 function stringValue(form: FormData, key: string): string {
