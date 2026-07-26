@@ -48,6 +48,8 @@ import {
   createIncomeStatementReportPdf,
   createFund,
   deleteBudgetLine,
+  fundActivityCsv,
+  fundActivityReport,
   incomeStatement,
   listBudgetLines,
   listFunds,
@@ -80,6 +82,7 @@ import {
   budgetPage,
   budgetVsActualPage,
   dashboardPage,
+  fundDetailPage,
   fundsPage,
   incomeStatementPage,
   journalEntryEditPage,
@@ -109,6 +112,8 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/accounts", handler: postAccounts },
   { method: "GET", path: "/funds", handler: getFunds },
   { method: "POST", path: "/funds", handler: postFunds },
+  { method: "GET", path: "/funds/detail", handler: getFundDetail },
+  { method: "GET", path: "/funds/detail.csv", handler: getFundDetailCsv },
   { method: "GET", path: "/budget", handler: getBudget },
   { method: "POST", path: "/budget", handler: postBudget },
   { method: "POST", path: "/budget/update", handler: postBudgetUpdate },
@@ -376,6 +381,28 @@ async function postFunds(request: Request, env: Env): Promise<Response> {
   }
 
   return redirect("/funds");
+}
+
+async function getFundDetail(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const fundId = new URL(request.url).searchParams.get("id") ?? "";
+  const report = fundId ? await fundActivityReport(env, context.organization.id, fundId) : null;
+  if (!report) return redirect("/funds");
+
+  return fundDetailPage(env.APP_NAME, context, report);
+}
+
+async function getFundDetailCsv(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const fundId = new URL(request.url).searchParams.get("id") ?? "";
+  const report = fundId ? await fundActivityReport(env, context.organization.id, fundId) : null;
+  if (!report) return redirect("/funds");
+
+  return csvResponse(fundActivityCsv(report), `${csvSafeFilename(report.fund.name)}-activity.csv`);
 }
 
 async function getBudget(request: Request, env: Env): Promise<Response> {
@@ -1100,4 +1127,8 @@ function csvResponse(csv: string, filename: string): Response {
       "X-Content-Type-Options": "nosniff"
     }
   });
+}
+
+function csvSafeFilename(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "fund";
 }
