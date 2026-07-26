@@ -184,7 +184,7 @@ export async function postJournalEntry(env: Env, organizationId: string, entryId
   }
 
   const lines = await env.DB.prepare(
-    `SELECT account_id AS accountId, fund_id AS fundId, description, debit_amount_cents AS debitAmountCents, credit_amount_cents AS creditAmountCents
+    `SELECT account_id AS "accountId", fund_id AS "fundId", description, debit_amount_cents AS "debitAmountCents", credit_amount_cents AS "creditAmountCents"
      FROM journal_entry_lines
      WHERE organization_id = ? AND journal_entry_id = ?
      ORDER BY line_number ASC`
@@ -255,11 +255,11 @@ export async function getJournalEntryDetail(env: Env, organizationId: string, en
     `SELECT
       id,
       line_number,
-      account_id AS accountId,
-      fund_id AS fundId,
+      account_id AS "accountId",
+      fund_id AS "fundId",
       description,
-      debit_amount_cents AS debitAmountCents,
-      credit_amount_cents AS creditAmountCents
+      debit_amount_cents AS "debitAmountCents",
+      credit_amount_cents AS "creditAmountCents"
      FROM journal_entry_lines
      WHERE organization_id = ? AND journal_entry_id = ?
      ORDER BY line_number ASC`
