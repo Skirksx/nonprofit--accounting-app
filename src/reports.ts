@@ -550,6 +550,37 @@ export function createBudgetReportPdf(report: BudgetReport): ArrayBuffer {
   return buildSimplePdf(operations.join("\n"), rotaryLogo);
 }
 
+export function createIncomeStatementReportPdf(report: IncomeStatementReport, organizationName: string): ArrayBuffer {
+  const rotaryLogo = pdfImageFromJpeg(ROTARY_LOGO_JPEG_BASE64, 198, 146);
+  const period = reportPeriodLabel(report.filters.startDate, report.filters.endDate);
+  const operations = [
+    pdfFillRect(0, 0, 612, 792, "1 1 1"),
+    pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
+    pdfFillRect(43, 649, 526, 106, "0.98 0.99 1"),
+    pdfFillRect(43, 611, 526, 38, "0.00 0.23 0.47"),
+    pdfFillRect(43, 649, 112, 106, "0.90 0.96 1"),
+    pdfDiagonalLines(),
+    pdfTextAt("Rotary", 336, 704, 34, "F2", "0.00 0.23 0.47"),
+    pdfImageAt("Im1", 445, 680, 88, 65),
+    pdfTextAt(organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
+    pdfCenteredText("INCOME STATEMENT", 17, 624, "F2", "1 1 1"),
+    pdfCenteredText(period, 9, 594, "F1", "0.00 0.23 0.47")
+  ];
+
+  const afterRevenue = financialReportSection(operations, "REVENUE", report.revenues, report.totalRevenueCents, "TOTAL REVENUE", 552, "income");
+  const afterExpenses = financialReportSection(operations, "EXPENSES", report.expenses, report.totalExpenseCents, "TOTAL EXPENSES", afterRevenue - 28, "expenses");
+
+  operations.push(
+    pdfFillRect(62, afterExpenses - 12, 488, 28, "0.00 0.23 0.47"),
+    pdfTextAt("NET INCOME", 218, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfTextAt("|", 362, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfTextAt(formatMoney(report.netIncomeCents), 394, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfCenteredText("Service Above Self", 9, afterExpenses - 26, "F3", "0.00 0.23 0.47")
+  );
+
+  return buildSimplePdf(operations.join("\n"), rotaryLogo);
+}
+
 export async function budgetVsActual(
   env: Env,
   filters: BudgetVsActualReport["filters"]
@@ -813,6 +844,66 @@ function budgetReportSection(
   );
 
   return y - 20;
+}
+
+function financialReportSection(
+  operations: string[],
+  title: string,
+  rows: FinancialReportRow[],
+  totalCents: number,
+  totalLabel: string,
+  topY: number,
+  icon: "expenses" | "income"
+): number {
+  const x = 62;
+  const width = 488;
+  const rowHeight = 16;
+  const accountWidth = 104;
+  const nameWidth = 256;
+  const amountWidth = width - accountWidth - nameWidth;
+  let y = topY;
+
+  operations.push(
+    ...pdfSectionIcon(x + 20, y + 13, icon),
+    pdfTextAt(title, x + 48, y + 4, 19, "F2", "0.00 0.23 0.47"),
+    pdfFillRect(x + 48, y - 3, width - 48, 2, "0.97 0.67 0.00")
+  );
+  y -= 18;
+
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.00 0.23 0.47"),
+    pdfTableGrid(x, y, width, rowHeight, [accountWidth, nameWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt("Account", x + 28, y + 5, 8, "F2", "1 1 1"),
+    pdfTextAt("Description", x + accountWidth + 74, y + 5, 8, "F2", "1 1 1"),
+    pdfTextAt("Amount", x + accountWidth + nameWidth + 48, y + 5, 8, "F2", "1 1 1")
+  );
+  y -= rowHeight;
+
+  for (const row of rows) {
+    operations.push(
+      pdfTableGrid(x, y, width, rowHeight, [accountWidth, nameWidth, amountWidth], "0.78 0.86 0.94"),
+      pdfTextAt(row.account_number, x + 10, y + 5, 8, "F1", "0.10 0.12 0.14"),
+      pdfTextAt(row.account_name, x + accountWidth + 10, y + 5, 8, "F1", "0.10 0.12 0.14"),
+      pdfRightText(formatMoney(row.amount_cents), x + width - 10, y + 5, 8, "F1", "0.10 0.12 0.14")
+    );
+    y -= rowHeight;
+  }
+
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.88 0.94 0.98"),
+    pdfTableGrid(x, y, width, rowHeight, [accountWidth, nameWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt(totalLabel, x + accountWidth + 10, y + 5, 8.5, "F2", "0.00 0.23 0.47"),
+    pdfRightText(formatMoney(totalCents), x + width - 10, y + 5, 8.5, "F2", "0.00 0.23 0.47")
+  );
+
+  return y - 20;
+}
+
+function reportPeriodLabel(startDate?: string, endDate?: string): string {
+  if (startDate && endDate) return `${startDate} to ${endDate}`;
+  if (startDate) return `From ${startDate}`;
+  if (endDate) return `Through ${endDate}`;
+  return "All posted activity";
 }
 
 function stringValue(form: FormData, key: string): string {
