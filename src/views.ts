@@ -3,6 +3,7 @@ import type { UserOrganization } from "./auth.ts";
 import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
+  AccountRegisterReport,
   BalanceSheetReport,
   BudgetLineRecord,
   BudgetVsActualReport,
@@ -588,33 +589,27 @@ export function fundsPage(
 }
 
 export function fundDetailPage(appName: string, context: AuthContext, report: FundActivityReport, funds: Fund[]): Response {
-  const rows = report.rows.length
-    ? report.rows
-        .map(
-          (row) => `<tr>
-            <td>${escapeHtml(row.entry_date)}</td>
-            <td>${escapeHtml(row.entry_number)}</td>
-            <td>${escapeHtml(row.line_description || row.entry_description)}</td>
-            <td>${escapeHtml(`${row.account_number} - ${row.account_name}`)}</td>
-            <td>${formatAccountType(row.account_type)}</td>
-            <td class="amount">${row.account_type === "revenue" ? formatMoney(row.amount_cents) : ""}</td>
-            <td class="amount">${row.account_type === "expense" ? formatMoney(row.amount_cents) : ""}</td>
-            <td class="amount">${formatMoney(row.running_balance_cents)}</td>
-            <td>
-              <form method="post" action="/funds/activity/update" class="table-edit-form">
-                <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
-                <input type="hidden" name="lineId" value="${escapeHtml(row.line_id)}">
-                <input type="hidden" name="returnFundId" value="${escapeHtml(report.fund.id)}">
-                <select name="fundId">
-                  ${fundOptions(funds, report.fund.id)}
-                </select>
-                <button class="small-button" type="submit">Move</button>
-              </form>
-            </td>
-          </tr>`
-        )
-        .join("")
-    : `<tr><td colspan="9" class="empty">No posted revenue or expense activity for this fund yet.</td></tr>`;
+  const rows = fundActivityRows(report.rows, funds, context.csrfToken, report.fund.id, true);
+  const draftRows = fundActivityRows(report.draftRows, funds, context.csrfToken, report.fund.id, false);
+  const draftNotice = report.draftRows.length
+    ? `<section class="content-band report-section">
+        <h2>Draft activity not included in balance</h2>
+        <p class="muted">These draft entries are assigned to this fund, but they will not change the fund balance until they are posted.</p>
+        <div class="metric-grid">
+          <article class="metric"><span>Draft income</span><strong>${formatMoney(report.draftIncomeCents)}</strong></article>
+          <article class="metric"><span>Draft expenses</span><strong>${formatMoney(report.draftExpenseCents)}</strong></article>
+        </div>
+        <div class="table-wrap report-table">
+          <table>
+            <thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Account</th><th>Type</th><th>Income</th><th>Expense</th><th>Correct fund</th></tr></thead>
+            <tbody>${draftRows}</tbody>
+          </table>
+        </div>
+      </section>`
+    : `<section class="content-band report-section">
+        <h2>Draft activity not included in balance</h2>
+        <p class="muted">No draft revenue or expense entries are currently assigned to this fund.</p>
+      </section>`;
 
   return layout({
     title: `${report.fund.name} Fund`,
@@ -641,8 +636,51 @@ export function fundDetailPage(appName: string, context: AuthContext, report: Fu
             <tbody>${rows}</tbody>
           </table>
         </div>
-      </section>`
+      </section>
+      ${draftNotice}`
   });
+}
+
+function fundActivityRows(
+  rows: FundActivityReport["rows"],
+  funds: Fund[],
+  csrfToken: string,
+  currentFundId: string,
+  includeRunningBalance: boolean
+): string {
+  if (rows.length === 0) {
+    const colspan = includeRunningBalance ? 9 : 8;
+    const message = includeRunningBalance
+      ? "No posted revenue or expense activity for this fund yet."
+      : "No draft revenue or expense activity for this fund yet.";
+    return `<tr><td colspan="${colspan}" class="empty">${message}</td></tr>`;
+  }
+
+  return rows
+    .map(
+      (row) => `<tr>
+        <td>${escapeHtml(row.entry_date)}</td>
+        <td>${escapeHtml(row.entry_number)}</td>
+        <td>${escapeHtml(row.line_description || row.entry_description)}</td>
+        <td>${escapeHtml(`${row.account_number} - ${row.account_name}`)}</td>
+        <td>${formatAccountType(row.account_type)}</td>
+        <td class="amount">${row.account_type === "revenue" ? formatMoney(row.amount_cents) : ""}</td>
+        <td class="amount">${row.account_type === "expense" ? formatMoney(row.amount_cents) : ""}</td>
+        ${includeRunningBalance ? `<td class="amount">${formatMoney(row.running_balance_cents)}</td>` : ""}
+        <td>
+          <form method="post" action="/funds/activity/update" class="table-edit-form">
+            <input type="hidden" name="csrfToken" value="${escapeHtml(csrfToken)}">
+            <input type="hidden" name="lineId" value="${escapeHtml(row.line_id)}">
+            <input type="hidden" name="returnFundId" value="${escapeHtml(currentFundId)}">
+            <select name="fundId">
+              ${fundOptions(funds, currentFundId)}
+            </select>
+            <button class="small-button" type="submit">Move</button>
+          </form>
+        </td>
+      </tr>`
+    )
+    .join("");
 }
 
 export function accountsPage(
@@ -990,6 +1028,67 @@ export function balanceSheetPage(
                 <span>Total liabilities and net assets</span>
                 <strong>${formatMoney(report.totalLiabilitiesAndNetAssetsCents)}</strong>
               </div>
+            </section>`
+          : ""
+      }`
+  });
+}
+
+export function accountRegisterPage(
+  appName: string,
+  context: AuthContext,
+  accounts: ChartAccount[],
+  report: AccountRegisterReport | null,
+  errors: Record<string, string> = {}
+): Response {
+  const selectedAccountId = report?.filters.accountId ?? "";
+
+  return layout({
+    title: "Account Register",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Account Register</h1>
+        <p class="muted">Deposits, payments, and running balance for one money account.</p>
+      </section>
+      ${reportNav()}
+      <form method="get" action="/reports/account-register" class="grid-form report-filter">
+        <label>Account
+          <select name="accountId">
+            ${accountOptions(accounts, "No active bank or liability accounts", selectedAccountId)}
+          </select>
+          ${errorText(errors.accountId)}
+        </label>
+        ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
+        ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
+        <div class="form-actions">
+          ${report ? `<a class="button-like" href="${escapeHtml(accountRegisterCsvUrl(report))}">Download CSV</a>` : ""}
+          <button type="submit">Run report</button>
+        </div>
+      </form>
+      ${
+        report
+          ? `<section class="content-band report-section">
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <span>Account</span>
+                  <strong>${escapeHtml(report.account.account_number)} - ${escapeHtml(report.account.account_name)}</strong>
+                </div>
+                <div class="metric-card">
+                  <span>Deposits / debits</span>
+                  <strong>${formatMoney(report.totalDebitsCents)}</strong>
+                </div>
+                <div class="metric-card">
+                  <span>Payments / credits</span>
+                  <strong>${formatMoney(report.totalCreditsCents)}</strong>
+                </div>
+                <div class="metric-card">
+                  <span>Ending balance</span>
+                  <strong>${formatMoney(report.endingBalanceCents)}</strong>
+                </div>
+              </div>
+              ${accountRegisterTable(report)}
             </section>`
           : ""
       }`
@@ -1472,6 +1571,30 @@ function financialRowsTable(rows: FinancialReportRow[]): string {
   </div>`;
 }
 
+function accountRegisterTable(report: AccountRegisterReport): string {
+  const body = report.rows.length
+    ? report.rows
+        .map(
+          (row) => `<tr>
+            <td>${escapeHtml(row.entry_date)}</td>
+            <td>${escapeHtml(row.entry_number)}</td>
+            <td>${escapeHtml(row.line_description || row.entry_description)}</td>
+            <td class="amount">${row.debit_amount_cents > 0 ? formatMoney(row.debit_amount_cents) : ""}</td>
+            <td class="amount">${row.credit_amount_cents > 0 ? formatMoney(row.credit_amount_cents) : ""}</td>
+            <td class="amount">${formatMoney(row.running_balance_cents)}</td>
+          </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="6" class="empty">No posted transactions for this account in the selected dates.</td></tr>`;
+
+  return `<div class="table-wrap report-table">
+    <table>
+      <thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Deposit / debit</th><th>Payment / credit</th><th>Running balance</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
 function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
   const body = rows.length
     ? rows
@@ -1545,11 +1668,20 @@ function budgetLineTable(rows: BudgetLineRecord[], accounts: ChartAccount[], fun
 function reportNav(): string {
   return `<nav class="report-nav" aria-label="Financial reports">
     <a href="/reports/balance-sheet">Balance Sheet</a>
+    <a href="/reports/account-register">Account Register</a>
     <a href="/reports/income-statement">Income Statement</a>
     <a href="/reports/statement-of-activities">Statement of Activities</a>
     <a href="/budget">Budget</a>
     <a href="/reports/budget-vs-actual">Budget vs Actual</a>
   </nav>`;
+}
+
+function accountRegisterCsvUrl(report: AccountRegisterReport): string {
+  const params = new URLSearchParams();
+  params.set("accountId", report.filters.accountId);
+  if (report.filters.startDate) params.set("startDate", report.filters.startDate);
+  if (report.filters.endDate) params.set("endDate", report.filters.endDate);
+  return `/reports/account-register.csv?${params.toString()}`;
 }
 
 function incomeStatementPdfUrl(report: IncomeStatementReport): string {
