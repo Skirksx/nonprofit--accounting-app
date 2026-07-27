@@ -15,6 +15,7 @@ import type {
   StatementOfActivitiesReport,
   StatementOfActivitiesRow
 } from "./reports.ts";
+import { rotaryLogoDataUrl } from "./reports.ts";
 import type { AccountType, AuthContext } from "./types.ts";
 
 export function layout(options: {
@@ -23,6 +24,13 @@ export function layout(options: {
   body: string;
   context?: AuthContext;
 }): Response {
+  const logoSrc = options.context ? organizationLogoSrc(options.context) : null;
+  const brandLogo = logoSrc
+    ? `<img class="brand-logo" src="${escapeHtml(logoSrc)}" alt="${escapeHtml(options.context?.organization.name ?? options.appName)} logo">`
+    : "";
+  const organizationBadge = options.context
+    ? `<span class="brand-org">${escapeHtml(options.context.organization.name)}</span>`
+    : "";
   const payrollLink = options.context?.organization.organization_profile === "church"
     ? `<a href="/payroll">Payroll</a>`
     : "";
@@ -55,12 +63,23 @@ export function layout(options: {
       </head>
       <body>
         <header class="topbar">
-          <a class="brand" href="${options.context ? "/dashboard" : "/login"}">${escapeHtml(options.appName)}</a>
+          <a class="brand" href="${options.context ? "/dashboard" : "/login"}">
+            ${brandLogo}
+            <span>
+              <strong>${escapeHtml(options.appName)}</strong>
+              ${organizationBadge}
+            </span>
+          </a>
           ${navigation}
         </header>
         <main class="shell">${options.body}</main>
       </body>
     </html>`);
+}
+
+function organizationLogoSrc(context: AuthContext): string | null {
+  return context.organization.logo_data_url
+    ?? (context.organization.organization_profile === "rotary" ? rotaryLogoDataUrl() : null);
 }
 
 export function loginPage(appName: string, error?: string): Response {
@@ -124,15 +143,18 @@ export function dashboardPage(appName: string, context: AuthContext, stats: {
   activeAccountCount: number;
 }): Response {
   const profile = organizationProfileContent(context);
+  const logoSrc = organizationLogoSrc(context);
   return layout({
     title: "Dashboard",
     appName,
     context,
-    body: `<section class="page-heading dashboard-heading">
-        ${context.organization.logo_data_url ? `<img class="org-logo" src="${escapeHtml(context.organization.logo_data_url)}" alt="${escapeHtml(context.organization.name)} logo">` : ""}
-        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
-        <h1>${escapeHtml(profile.heading)}</h1>
-        <p class="muted">${escapeHtml(profile.description)} Welcome back, ${escapeHtml(context.user.name)}. Your role is ${escapeHtml(context.role)}.</p>
+    body: `<section class="page-heading dashboard-heading branded-heading">
+        ${logoSrc ? `<img class="org-logo" src="${escapeHtml(logoSrc)}" alt="${escapeHtml(context.organization.name)} logo">` : ""}
+        <div>
+          <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+          <h1>${escapeHtml(profile.heading)}</h1>
+          <p class="muted">${escapeHtml(profile.description)} Welcome back, ${escapeHtml(context.user.name)}. Your role is ${escapeHtml(context.role)}.</p>
+        </div>
       </section>
       <section class="metric-grid">
         <article class="metric"><span>Total accounts</span><strong>${stats.accountCount}</strong></article>
