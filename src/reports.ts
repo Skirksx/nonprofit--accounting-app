@@ -334,6 +334,10 @@ const ROTARY_LOGO_JPEG_BASE64 = [
   "KUhCEKV//9k="
 ].join("");
 
+export function rotaryLogoDataUrl(): string {
+  return `data:image/jpeg;base64,${ROTARY_LOGO_JPEG_BASE64}`;
+}
+
 export function parseStatementOfActivitiesFilters(
   url: URL,
   organizationId: string
