@@ -28,8 +28,11 @@ export type FundActivityRow = {
 export type FundActivityReport = {
   fund: Fund;
   rows: FundActivityRow[];
+  draftRows: FundActivityRow[];
   totalIncomeCents: number;
   totalExpenseCents: number;
+  draftIncomeCents: number;
+  draftExpenseCents: number;
   balanceCents: number;
 };
 
@@ -62,6 +65,40 @@ export type BalanceSheetFilters = {
   organizationId: string;
   asOfDate?: string;
   fundId?: string;
+};
+
+export type AccountRegisterFilters = {
+  organizationId: string;
+  accountId?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type AccountRegisterRow = {
+  entry_id: string;
+  entry_number: string;
+  entry_date: string;
+  entry_description: string;
+  line_description: string;
+  debit_amount_cents: number;
+  credit_amount_cents: number;
+  change_cents: number;
+  running_balance_cents: number;
+};
+
+export type AccountRegisterReport = {
+  filters: Required<Pick<AccountRegisterFilters, "organizationId" | "accountId">> &
+    Pick<AccountRegisterFilters, "startDate" | "endDate">;
+  account: {
+    id: string;
+    account_number: string;
+    account_name: string;
+    account_type: AccountType;
+  };
+  rows: AccountRegisterRow[];
+  totalDebitsCents: number;
+  totalCreditsCents: number;
+  endingBalanceCents: number;
 };
 
 export type FinancialReportFilters = {
@@ -329,6 +366,22 @@ export function parseBalanceSheetFilters(
   return Object.keys(errors).length > 0 ? { errors } : { organizationId, asOfDate, fundId };
 }
 
+export function parseAccountRegisterFilters(
+  url: URL,
+  organizationId: string
+): AccountRegisterFilters | { errors: Record<string, string> } {
+  const accountId = url.searchParams.get("accountId")?.trim() || undefined;
+  const startDate = url.searchParams.get("startDate")?.trim() || undefined;
+  const endDate = url.searchParams.get("endDate")?.trim() || undefined;
+  const errors: Record<string, string> = {};
+
+  if (startDate && !isIsoDate(startDate)) errors.startDate = "Start date must use YYYY-MM-DD.";
+  if (endDate && !isIsoDate(endDate)) errors.endDate = "End date must use YYYY-MM-DD.";
+  if (startDate && endDate && startDate > endDate) errors.endDate = "End date must be on or after the start date.";
+
+  return Object.keys(errors).length > 0 ? { errors } : { organizationId, accountId, startDate, endDate };
+}
+
 export function parseFinancialReportFilters(
   url: URL,
   organizationId: string
@@ -430,6 +483,41 @@ export async function fundActivityReport(env: Env, organizationId: string, fundI
   const fund = await getFund(env, organizationId, fundId);
   if (!fund) return null;
 
+  const rows = await fundActivityRows(env, organizationId, fundId, "posted", true);
+  const draftRows = await fundActivityRows(env, organizationId, fundId, "draft", false);
+
+  const totalIncomeCents = rows
+    .filter((row) => row.account_type === "revenue")
+    .reduce((total, row) => total + row.amount_cents, 0);
+  const totalExpenseCents = rows
+    .filter((row) => row.account_type === "expense")
+    .reduce((total, row) => total + row.amount_cents, 0);
+  const draftIncomeCents = draftRows
+    .filter((row) => row.account_type === "revenue")
+    .reduce((total, row) => total + row.amount_cents, 0);
+  const draftExpenseCents = draftRows
+    .filter((row) => row.account_type === "expense")
+    .reduce((total, row) => total + row.amount_cents, 0);
+
+  return {
+    fund,
+    rows,
+    draftRows,
+    totalIncomeCents,
+    totalExpenseCents,
+    draftIncomeCents,
+    draftExpenseCents,
+    balanceCents: totalIncomeCents - totalExpenseCents
+  };
+}
+
+async function fundActivityRows(
+  env: Env,
+  organizationId: string,
+  fundId: string,
+  status: "posted" | "draft",
+  includeRunningBalance: boolean
+): Promise<FundActivityRow[]> {
   const result = await env.DB.prepare(
     `SELECT
       journal_entry_lines.id AS line_id,
@@ -452,39 +540,24 @@ export async function fundActivityReport(env: Env, organizationId: string, fundI
     JOIN journal_entries ON journal_entries.id = journal_entry_lines.journal_entry_id
     JOIN accounts ON accounts.id = journal_entry_lines.account_id
     WHERE journal_entries.organization_id = ?
-      AND journal_entries.status = 'posted'
+      AND journal_entries.status = ?
       AND journal_entry_lines.fund_id = ?
       AND accounts.account_type IN ('revenue', 'expense')
     ORDER BY journal_entries.entry_date ASC, journal_entries.entry_number ASC, journal_entry_lines.line_number ASC`
   )
-    .bind(organizationId, fundId)
+    .bind(organizationId, status, fundId)
     .all<Omit<FundActivityRow, "balance_effect_cents" | "running_balance_cents">>();
 
   let runningBalanceCents = 0;
-  const rows = (result.results ?? []).map((row) => {
+  return (result.results ?? []).map((row) => {
     const balanceEffectCents = row.account_type === "revenue" ? row.amount_cents : -row.amount_cents;
-    runningBalanceCents += balanceEffectCents;
+    if (includeRunningBalance) runningBalanceCents += balanceEffectCents;
     return {
       ...row,
       balance_effect_cents: balanceEffectCents,
-      running_balance_cents: runningBalanceCents
+      running_balance_cents: includeRunningBalance ? runningBalanceCents : 0
     };
   });
-
-  const totalIncomeCents = rows
-    .filter((row) => row.account_type === "revenue")
-    .reduce((total, row) => total + row.amount_cents, 0);
-  const totalExpenseCents = rows
-    .filter((row) => row.account_type === "expense")
-    .reduce((total, row) => total + row.amount_cents, 0);
-
-  return {
-    fund,
-    rows,
-    totalIncomeCents,
-    totalExpenseCents,
-    balanceCents: totalIncomeCents - totalExpenseCents
-  };
 }
 
 export function fundActivityCsv(report: FundActivityReport): string {
@@ -525,6 +598,127 @@ export async function balanceSheet(env: Env, filters: BalanceSheetFilters): Prom
     totalNetAssetsCents,
     totalLiabilitiesAndNetAssetsCents: totalLiabilitiesCents + totalNetAssetsCents
   };
+}
+
+export async function accountRegister(
+  env: Env,
+  filters: Required<Pick<AccountRegisterFilters, "organizationId" | "accountId">> &
+    Pick<AccountRegisterFilters, "startDate" | "endDate">
+): Promise<AccountRegisterReport | null> {
+  const account = await env.DB.prepare(
+    `SELECT id, account_number, account_name, account_type
+     FROM accounts
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(filters.organizationId, filters.accountId)
+    .first<AccountRegisterReport["account"]>();
+
+  if (!account) return null;
+
+  const opening = await accountRegisterOpeningBalance(env, filters, account.account_type);
+  const where = [
+    "journal_entries.organization_id = ?",
+    "journal_entries.status = 'posted'",
+    "journal_entry_lines.account_id = ?"
+  ];
+  const bindings: string[] = [filters.organizationId, filters.accountId];
+
+  if (filters.startDate) {
+    where.push("journal_entries.entry_date >= ?");
+    bindings.push(filters.startDate);
+  }
+  if (filters.endDate) {
+    where.push("journal_entries.entry_date <= ?");
+    bindings.push(filters.endDate);
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT
+      journal_entries.id AS entry_id,
+      journal_entries.entry_number,
+      journal_entries.entry_date,
+      journal_entries.description AS entry_description,
+      journal_entry_lines.description AS line_description,
+      journal_entry_lines.debit_amount_cents,
+      journal_entry_lines.credit_amount_cents
+    FROM journal_entry_lines
+    JOIN journal_entries ON journal_entries.id = journal_entry_lines.journal_entry_id
+    WHERE ${where.join(" AND ")}
+    ORDER BY journal_entries.entry_date ASC, journal_entries.entry_number ASC, journal_entry_lines.line_number ASC`
+  )
+    .bind(...bindings)
+    .all<Omit<AccountRegisterRow, "change_cents" | "running_balance_cents">>();
+
+  let runningBalanceCents = opening;
+  const rows = (result.results ?? []).map((row) => {
+    const changeCents = normalBalanceChange(account.account_type, row.debit_amount_cents, row.credit_amount_cents);
+    runningBalanceCents += changeCents;
+    return {
+      ...row,
+      change_cents: changeCents,
+      running_balance_cents: runningBalanceCents
+    };
+  });
+
+  return {
+    filters,
+    account,
+    rows,
+    totalDebitsCents: rows.reduce((total, row) => total + row.debit_amount_cents, 0),
+    totalCreditsCents: rows.reduce((total, row) => total + row.credit_amount_cents, 0),
+    endingBalanceCents: runningBalanceCents
+  };
+}
+
+export function accountRegisterCsv(report: AccountRegisterReport): string {
+  return toCsv(
+    ["date", "entry_number", "description", "debit", "credit", "change", "running_balance"],
+    report.rows.map((row) => [
+      row.entry_date,
+      row.entry_number,
+      row.line_description || row.entry_description,
+      row.debit_amount_cents > 0 ? centsForCsv(row.debit_amount_cents) : "",
+      row.credit_amount_cents > 0 ? centsForCsv(row.credit_amount_cents) : "",
+      centsForCsv(row.change_cents),
+      centsForCsv(row.running_balance_cents)
+    ])
+  );
+}
+
+async function accountRegisterOpeningBalance(
+  env: Env,
+  filters: Required<Pick<AccountRegisterFilters, "organizationId" | "accountId">> &
+    Pick<AccountRegisterFilters, "startDate" | "endDate">,
+  accountType: AccountType
+): Promise<number> {
+  if (!filters.startDate) return 0;
+
+  const result = await env.DB.prepare(
+    `SELECT
+      COALESCE(SUM(
+        CASE
+          WHEN ? IN ('asset', 'expense')
+            THEN journal_entry_lines.debit_amount_cents - journal_entry_lines.credit_amount_cents
+          ELSE journal_entry_lines.credit_amount_cents - journal_entry_lines.debit_amount_cents
+        END
+      ), 0) AS amount_cents
+    FROM journal_entry_lines
+    JOIN journal_entries ON journal_entries.id = journal_entry_lines.journal_entry_id
+    WHERE journal_entries.organization_id = ?
+      AND journal_entries.status = 'posted'
+      AND journal_entry_lines.account_id = ?
+      AND journal_entries.entry_date < ?`
+  )
+    .bind(accountType, filters.organizationId, filters.accountId, filters.startDate)
+    .first<{ amount_cents: number }>();
+
+  return Number(result?.amount_cents ?? 0);
+}
+
+function normalBalanceChange(accountType: AccountType, debitCents: number, creditCents: number): number {
+  return accountType === "asset" || accountType === "expense"
+    ? debitCents - creditCents
+    : creditCents - debitCents;
 }
 
 export async function incomeStatement(env: Env, filters: FinancialReportFilters): Promise<IncomeStatementReport> {
