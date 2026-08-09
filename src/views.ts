@@ -1,6 +1,13 @@
 import type { ChartAccount } from "./accounts.ts";
 import type { UserOrganization } from "./auth.ts";
 import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
+import {
+  frequencyLabel,
+  invoiceIncludedLabel,
+  memberDuesInvoice,
+  memberInvoiceEmailHref,
+  type MemberDuesRecord
+} from "./memberDues.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
   AccountRegisterReport,
@@ -35,12 +42,16 @@ export function layout(options: {
   const payrollLink = options.context?.organization.organization_profile === "church"
     ? `<a href="/payroll">Payroll</a>`
     : "";
+  const memberDuesLink = options.context?.organization.organization_profile === "rotary"
+    ? `<a href="/member-dues">Member Dues Tracking</a>`
+    : "";
   const navigation = options.context
     ? `<nav class="nav">
         <a href="/dashboard">Dashboard</a>
         <a href="/transactions/new">New transaction</a>
         <a href="/journal-entries/new">Advanced ledger</a>
         ${payrollLink}
+        ${memberDuesLink}
         <a href="/funds">Funds</a>
         <a href="/accounts">Chart of accounts</a>
         <a href="/budget">Budget</a>
@@ -237,6 +248,96 @@ export function organizationsPage(
           </label>
           <button type="submit">Create and open</button>
         </form>
+      </section>`
+  });
+}
+
+export function memberDuesPage(appName: string, context: AuthContext, members: MemberDuesRecord[]): Response {
+  const paidCount = members.reduce((sum, member) => sum + member.q1_paid + member.q2_paid + member.q3_paid + member.q4_paid, 0);
+  const openCount = members.length * 4 - paidCount;
+  return layout({
+    title: "Member Dues Tracking",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">${escapeHtml(context.organization.name)}</p>
+        <h1>Member Dues Tracking</h1>
+        <p class="muted">Track dues frequency, invoice type, quarterly payments, notes, and invoice actions for Rotary members.</p>
+      </section>
+      <section class="metric-grid">
+        <article class="metric"><span>Members</span><strong>${members.length}</strong></article>
+        <article class="metric"><span>Paid quarters</span><strong>${paidCount}</strong></article>
+        <article class="metric"><span>Open quarters</span><strong>${openCount}</strong></article>
+      </section>
+      <section class="content-band dues-toolbar">
+        <div>
+          <h2>M&M Rotary Club - Fiscal Year 2026-2027</h2>
+          <p class="muted">Click a member name to prepare an invoice PDF and email draft.</p>
+        </div>
+      </section>
+      <div class="table-wrap dues-sheet">
+        <table>
+          <thead>
+            <tr>
+              <th>Member Name</th>
+              <th>Email</th>
+              <th>Address</th>
+              <th>Dues Frequency Preference</th>
+              <th>Included on invoice</th>
+              <th>Q1<br>(7/1-9/30)<br>Paid</th>
+              <th>Q2<br>(10/1-12/31)<br>Paid</th>
+              <th>Q3<br>(1/1-3/31)<br>Paid</th>
+              <th>Q4<br>(4/1-6/30)<br>Paid</th>
+              <th>Notes</th>
+              <th>Save</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${members.map((member) => memberDuesRow(member, context.csrfToken)).join("")}
+          </tbody>
+        </table>
+      </div>`
+  });
+}
+
+export function memberDuesDetailPage(appName: string, context: AuthContext, member: MemberDuesRecord): Response {
+  const invoice = memberDuesInvoice(member);
+  return layout({
+    title: "Member dues invoice",
+    appName,
+    context,
+    body: `<section class="page-heading">
+        <p class="eyebrow">Member dues tracking</p>
+        <h1>${escapeHtml(member.member_name.split("\n")[0])}</h1>
+        <p class="muted">Create an invoice PDF or open an email draft for this member. Automatic sending can be added once an email service is connected.</p>
+      </section>
+      <section class="split">
+        <div class="content-band">
+          <h2>Member details</h2>
+          <dl class="detail-list">
+            <dt>Email</dt><dd>${member.email ? escapeHtml(member.email) : "No email on file"}</dd>
+            <dt>Address</dt><dd>${escapeHtml(member.address).replaceAll("\n", "<br>") || "No address on file"}</dd>
+            <dt>Dues frequency</dt><dd>${escapeHtml(frequencyLabel(member.dues_frequency))}</dd>
+            <dt>Invoice includes</dt><dd>${escapeHtml(invoiceIncludedLabel(member.invoice_included) || "Not selected")}</dd>
+          </dl>
+        </div>
+        <div class="content-band">
+          <h2>Invoice preview</h2>
+          <div class="table-wrap report-table">
+            <table>
+              <thead><tr><th>Description</th><th class="amount">Amount</th></tr></thead>
+              <tbody>
+                ${invoice.lineItems.map((item) => `<tr><td>${escapeHtml(item.description)}</td><td class="amount">${formatMoney(item.amountCents)}</td></tr>`).join("")}
+              </tbody>
+            </table>
+          </div>
+          ${reportTotal("Total due", invoice.totalCents)}
+          <div class="form-actions dues-actions">
+            <a href="/member-dues">Back to tracker</a>
+            <a class="button-like" href="/member-dues/invoice.pdf?id=${encodeURIComponent(member.id)}">Create invoice PDF</a>
+            ${member.email ? `<a class="button-like" href="${escapeHtml(memberInvoiceEmailHref(invoice))}">Open email draft</a>` : ""}
+          </div>
+        </div>
       </section>`
   });
 }
@@ -1477,6 +1578,45 @@ function fundOptions(funds: Fund[], selectedFundId = ""): string {
     .join("");
 }
 
+function memberDuesRow(member: MemberDuesRecord, csrfToken: string): string {
+  const formId = `dues-${member.id}`;
+  return `<tr>
+    <td class="dues-member-name">
+      <a href="/member-dues/member?id=${encodeURIComponent(member.id)}">${escapeHtml(member.member_name).replaceAll("\n", "<br>")}</a>
+    </td>
+    <td>
+      <form id="${escapeHtml(formId)}" method="post" action="/member-dues/update">
+        <input type="hidden" name="csrfToken" value="${escapeHtml(csrfToken)}">
+        <input type="hidden" name="id" value="${escapeHtml(member.id)}">
+        <input name="memberName" value="${escapeHtml(member.member_name)}" aria-label="Member name for ${escapeHtml(member.member_name)}">
+      </form>
+      <input form="${escapeHtml(formId)}" name="email" type="email" value="${escapeHtml(member.email)}" aria-label="Email for ${escapeHtml(member.member_name)}">
+    </td>
+    <td><textarea form="${escapeHtml(formId)}" name="address" rows="2" aria-label="Address for ${escapeHtml(member.member_name)}">${escapeHtml(member.address)}</textarea></td>
+    <td>
+      <select form="${escapeHtml(formId)}" class="dues-pill dues-pill-frequency" name="duesFrequency" aria-label="Dues frequency for ${escapeHtml(member.member_name)}">
+        <option value=""${selected(member.dues_frequency, "")}></option>
+        <option value="annual"${selected(member.dues_frequency, "annual")}>Annual</option>
+        <option value="semi_annual"${selected(member.dues_frequency, "semi_annual")}>Semi-Annual</option>
+        <option value="quarterly"${selected(member.dues_frequency, "quarterly")}>Quarterly</option>
+      </select>
+    </td>
+    <td>
+      <select form="${escapeHtml(formId)}" class="dues-pill dues-pill-included" name="invoiceIncluded" aria-label="Invoice includes for ${escapeHtml(member.member_name)}">
+        <option value=""${selected(member.invoice_included, "")}></option>
+        <option value="dues_only"${selected(member.invoice_included, "dues_only")}>Dues Only</option>
+        <option value="dues_and_meals"${selected(member.invoice_included, "dues_and_meals")}>Dues and Meals</option>
+      </select>
+    </td>
+    <td class="dues-check"><input form="${escapeHtml(formId)}" name="q1Paid" type="checkbox"${checked(member.q1_paid)} aria-label="Q1 paid for ${escapeHtml(member.member_name)}"></td>
+    <td class="dues-check"><input form="${escapeHtml(formId)}" name="q2Paid" type="checkbox"${checked(member.q2_paid)} aria-label="Q2 paid for ${escapeHtml(member.member_name)}"></td>
+    <td class="dues-check"><input form="${escapeHtml(formId)}" name="q3Paid" type="checkbox"${checked(member.q3_paid)} aria-label="Q3 paid for ${escapeHtml(member.member_name)}"></td>
+    <td class="dues-check"><input form="${escapeHtml(formId)}" name="q4Paid" type="checkbox"${checked(member.q4_paid)} aria-label="Q4 paid for ${escapeHtml(member.member_name)}"></td>
+    <td><textarea form="${escapeHtml(formId)}" name="notes" rows="2" aria-label="Notes for ${escapeHtml(member.member_name)}">${escapeHtml(member.notes)}</textarea></td>
+    <td><button form="${escapeHtml(formId)}" class="small-button" type="submit">Save</button></td>
+  </tr>`;
+}
+
 function payrollEmployeeOptions(employees: PayrollEmployee[]): string {
   const activeEmployees = employees.filter((employee) => employee.status === "active");
   if (activeEmployees.length === 0) {
@@ -1811,6 +1951,7 @@ function organizationProfileContent(context: AuthContext): {
       moduleTitle: "Rotary modules",
       tasks: [
         { href: "/funds", label: "Service projects and grants" },
+        { href: "/member-dues", label: "Member dues tracking" },
         { href: "/transactions/new", label: "Dues and event income" },
         { href: "/budget", label: "Edit and print budget" },
         { href: "/reports/budget-vs-actual", label: "Budget vs actual" }
