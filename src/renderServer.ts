@@ -21,8 +21,12 @@ type D1Result<T = QueryResultRow> = {
 };
 
 const camelAliasMap: Record<string, string> = {
+  accountid: "accountId",
   accountcount: "accountCount",
   activeaccountcount: "activeAccountCount",
+  fundid: "fundId",
+  debitamountcents: "debitAmountCents",
+  creditamountcents: "creditAmountCents",
   grosspaycents: "grossPayCents",
   netpaycents: "netPayCents",
   federalwithholdingcents: "federalWithholdingCents",
@@ -334,7 +338,7 @@ export async function startRenderServer(): Promise<void> {
   });
 }
 
-function normalizeRow<T extends QueryResultRow>(row: T): QueryResultRow {
+export function normalizeRow<T extends QueryResultRow>(row: T): QueryResultRow {
   const normalized: QueryResultRow = { ...row };
   for (const [key, value] of Object.entries(row)) {
     const alias = camelAliasMap[key.toLowerCase()];
