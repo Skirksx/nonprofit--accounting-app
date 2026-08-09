@@ -51,11 +51,21 @@ export type StatementOfActivitiesRow = {
   amount_cents: number;
 };
 
+export type StatementOfActivitiesDetailRow = StatementOfActivitiesRow & {
+  entry_id: string;
+  entry_number: string;
+  entry_date: string;
+  entry_description: string;
+  line_description: string;
+};
+
 export type StatementOfActivitiesReport = {
   filters: Required<Pick<StatementOfActivitiesFilters, "organizationId">> &
     Pick<StatementOfActivitiesFilters, "startDate" | "endDate" | "fundId">;
   revenues: StatementOfActivitiesRow[];
   expenses: StatementOfActivitiesRow[];
+  revenueDetails: StatementOfActivitiesDetailRow[];
+  expenseDetails: StatementOfActivitiesDetailRow[];
   totalRevenueCents: number;
   totalExpenseCents: number;
   changeInNetAssetsCents: number;
@@ -922,6 +932,40 @@ export function createIncomeStatementReportPdf(report: IncomeStatementReport, or
   return buildSimplePdf(operations.join("\n"), rotaryLogo);
 }
 
+export function createStatementOfActivitiesReportPdf(
+  report: StatementOfActivitiesReport,
+  organizationName: string
+): ArrayBuffer {
+  const rotaryLogo = pdfImageFromJpeg(ROTARY_LOGO_JPEG_BASE64, 198, 146);
+  const period = reportPeriodLabel(report.filters.startDate, report.filters.endDate);
+  const operations = [
+    pdfFillRect(0, 0, 612, 792, "1 1 1"),
+    pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
+    pdfFillRect(43, 649, 526, 106, "0.98 0.99 1"),
+    pdfFillRect(43, 611, 526, 38, "0.00 0.23 0.47"),
+    pdfFillRect(43, 649, 112, 106, "0.90 0.96 1"),
+    pdfDiagonalLines(),
+    pdfTextAt("Rotary", 336, 704, 34, "F2", "0.00 0.23 0.47"),
+    pdfImageAt("Im1", 445, 680, 88, 65),
+    pdfTextAt(organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
+    pdfCenteredText("STATEMENT OF ACTIVITIES", 16, 624, "F2", "1 1 1"),
+    pdfCenteredText(period, 9, 594, "F1", "0.00 0.23 0.47")
+  ];
+
+  const afterRevenue = financialReportSection(operations, "REVENUE", report.revenues, report.totalRevenueCents, "TOTAL REVENUE", 552, "income");
+  const afterExpenses = financialReportSection(operations, "EXPENSES", report.expenses, report.totalExpenseCents, "TOTAL EXPENSES", afterRevenue - 28, "expenses");
+
+  operations.push(
+    pdfFillRect(62, afterExpenses - 12, 488, 28, "0.00 0.23 0.47"),
+    pdfTextAt("CHANGE IN NET ASSETS", 178, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfTextAt("|", 362, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfTextAt(formatMoney(report.changeInNetAssetsCents), 394, afterExpenses - 2, 13, "F2", "1 1 1"),
+    pdfCenteredText("Service Above Self", 9, afterExpenses - 26, "F3", "0.00 0.23 0.47")
+  );
+
+  return buildSimplePdf(operations.join("\n"), rotaryLogo);
+}
+
 export async function budgetVsActual(
   env: Env,
   filters: BudgetVsActualReport["filters"]
@@ -971,9 +1015,11 @@ export async function statementOfActivities(
   env: Env,
   filters: StatementOfActivitiesFilters
 ): Promise<StatementOfActivitiesReport> {
-  const rows = await activityRows(env, filters);
+  const [rows, details] = await Promise.all([activityRows(env, filters), statementActivityDetailRows(env, filters)]);
   const revenues = rows.filter((row) => row.account_type === "revenue");
   const expenses = rows.filter((row) => row.account_type === "expense");
+  const revenueDetails = details.filter((row) => row.account_type === "revenue");
+  const expenseDetails = details.filter((row) => row.account_type === "expense");
   const totalRevenueCents = sumFinancialRows(revenues);
   const totalExpenseCents = sumFinancialRows(expenses);
 
@@ -981,10 +1027,66 @@ export async function statementOfActivities(
     filters,
     revenues,
     expenses,
+    revenueDetails,
+    expenseDetails,
     totalRevenueCents,
     totalExpenseCents,
     changeInNetAssetsCents: totalRevenueCents - totalExpenseCents
   };
+}
+
+async function statementActivityDetailRows(
+  env: Env,
+  filters: StatementOfActivitiesFilters
+): Promise<StatementOfActivitiesDetailRow[]> {
+  const where = [
+    "journal_entries.organization_id = ?",
+    "journal_entries.status = 'posted'",
+    "accounts.account_type IN ('revenue', 'expense')"
+  ];
+  const bindings: string[] = [filters.organizationId];
+
+  if (filters.startDate) {
+    where.push("journal_entries.entry_date >= ?");
+    bindings.push(filters.startDate);
+  }
+  if (filters.endDate) {
+    where.push("journal_entries.entry_date <= ?");
+    bindings.push(filters.endDate);
+  }
+  if (filters.fundId) {
+    where.push("journal_entry_lines.fund_id = ?");
+    bindings.push(filters.fundId);
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT
+      journal_entries.id AS entry_id,
+      journal_entries.entry_number,
+      journal_entries.entry_date,
+      journal_entries.description AS entry_description,
+      journal_entry_lines.description AS line_description,
+      accounts.id AS account_id,
+      accounts.account_number,
+      accounts.account_name,
+      accounts.account_type,
+      CASE
+        WHEN accounts.account_type = 'revenue'
+          THEN journal_entry_lines.credit_amount_cents - journal_entry_lines.debit_amount_cents
+        WHEN accounts.account_type = 'expense'
+          THEN journal_entry_lines.debit_amount_cents - journal_entry_lines.credit_amount_cents
+        ELSE 0
+      END AS amount_cents
+    FROM journal_entry_lines
+    JOIN journal_entries ON journal_entries.id = journal_entry_lines.journal_entry_id
+    JOIN accounts ON accounts.id = journal_entry_lines.account_id
+    WHERE ${where.join(" AND ")}
+    ORDER BY journal_entries.entry_date ASC, journal_entries.entry_number ASC, accounts.account_number ASC`
+  )
+    .bind(...bindings)
+    .all<StatementOfActivitiesDetailRow>();
+
+  return result.results ?? [];
 }
 
 async function activityRows(env: Env, filters: FinancialReportFilters): Promise<FinancialReportRow[]> {
