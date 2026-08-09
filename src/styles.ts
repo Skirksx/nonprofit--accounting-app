@@ -70,7 +70,8 @@ button:hover,
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 2.75rem;
   border: 1px solid var(--line);
@@ -79,6 +80,10 @@ select {
   color: var(--ink);
   background: white;
   font: inherit;
+}
+
+textarea {
+  resize: vertical;
 }
 
 label {
@@ -518,6 +523,147 @@ h2 {
 
 .report-table {
   box-shadow: none;
+}
+
+.dues-toolbar {
+  margin-bottom: 1rem;
+}
+
+.dues-sheet {
+  width: min(1640px, calc(100vw - 2rem));
+  margin-left: 50%;
+  transform: translateX(-50%);
+  box-shadow: var(--shadow);
+}
+
+.dues-sheet table {
+  min-width: 1500px;
+  table-layout: fixed;
+  font-size: 0.92rem;
+}
+
+.dues-sheet th {
+  border: 1px solid #2d332f;
+  background: #bcbcbc;
+  color: #101512;
+  font-size: 0.9rem;
+  text-align: center;
+  text-transform: none;
+}
+
+.dues-sheet td {
+  border: 1px solid #2d332f;
+  padding: 0.25rem;
+  background: #f5f5f5;
+  vertical-align: middle;
+}
+
+.dues-sheet th:nth-child(1),
+.dues-sheet td:nth-child(1) {
+  width: 180px;
+}
+
+.dues-sheet th:nth-child(2),
+.dues-sheet td:nth-child(2) {
+  width: 250px;
+}
+
+.dues-sheet th:nth-child(3),
+.dues-sheet td:nth-child(3) {
+  width: 230px;
+}
+
+.dues-sheet th:nth-child(4),
+.dues-sheet td:nth-child(4),
+.dues-sheet th:nth-child(5),
+.dues-sheet td:nth-child(5) {
+  width: 150px;
+}
+
+.dues-sheet th:nth-child(6),
+.dues-sheet td:nth-child(6),
+.dues-sheet th:nth-child(7),
+.dues-sheet td:nth-child(7),
+.dues-sheet th:nth-child(8),
+.dues-sheet td:nth-child(8),
+.dues-sheet th:nth-child(9),
+.dues-sheet td:nth-child(9) {
+  width: 88px;
+}
+
+.dues-sheet th:nth-child(10),
+.dues-sheet td:nth-child(10) {
+  width: 330px;
+}
+
+.dues-sheet input,
+.dues-sheet select,
+.dues-sheet textarea {
+  min-height: 2rem;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.45rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dues-member-name {
+  font-weight: 800;
+}
+
+.dues-member-name a {
+  color: #111815;
+}
+
+.dues-pill {
+  min-height: 1.7rem;
+  border-radius: 999px;
+  text-align: center;
+  font-weight: 750;
+}
+
+.dues-pill-frequency {
+  background: #ffe69a !important;
+  color: #5d4800;
+}
+
+.dues-pill-included {
+  background: #e7c4f3 !important;
+  color: #67307d;
+}
+
+.dues-pill-included option[value="dues_and_meals"] {
+  color: #894314;
+}
+
+.dues-check {
+  text-align: center;
+}
+
+.dues-check input {
+  width: 1.2rem;
+  min-height: 1.2rem;
+  accent-color: #111815;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.65rem 1rem;
+}
+
+.detail-list dt {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.detail-list dd {
+  margin: 0;
+}
+
+.dues-actions {
+  justify-content: flex-start;
+  margin-top: 1rem;
 }
 
 .amount {
