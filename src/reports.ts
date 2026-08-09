@@ -1417,7 +1417,7 @@ function statementDetailReportSectionHeader(
     pdfTextAt("Entry", x + dateWidth + 10, y + 5, 7, "F2", "1 1 1"),
     pdfTextAt("Acct", x + dateWidth + entryWidth + 10, y + 5, 7, "F2", "1 1 1"),
     pdfTextAt("Name", x + dateWidth + entryWidth + accountWidth + 10, y + 5, 7, "F2", "1 1 1"),
-    pdfTextAt("Description", x + dateWidth + entryWidth + accountWidth + nameWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Transaction description", x + dateWidth + entryWidth + accountWidth + nameWidth + 10, y + 5, 7, "F2", "1 1 1"),
     pdfTextAt("Amount", x + width - amountWidth + 20, y + 5, 7, "F2", "1 1 1")
   );
 
