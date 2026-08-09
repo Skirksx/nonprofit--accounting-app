@@ -526,25 +526,48 @@ h2 {
 }
 
 .dues-toolbar {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(620px, 1.35fr);
+  gap: 1rem;
+  align-items: end;
   margin-bottom: 1rem;
 }
 
+.dues-settings-form {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.dues-settings-form label {
+  gap: 0.25rem;
+  font-size: 0.86rem;
+}
+
+.dues-settings-form input,
+.dues-settings-form select {
+  min-height: 2.4rem;
+}
+
 .dues-sheet {
-  width: min(1640px, calc(100vw - 2rem));
+  width: min(1760px, calc(100vw - 2rem));
   margin-left: 50%;
   transform: translateX(-50%);
   box-shadow: var(--shadow);
+  border-color: #c7cec7;
+  background: #fff;
 }
 
 .dues-sheet table {
-  min-width: 1500px;
+  min-width: 1660px;
   table-layout: fixed;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
 }
 
 .dues-sheet th {
-  border: 1px solid #2d332f;
-  background: #bcbcbc;
+  border: 1px solid #b8c0b9;
+  background: #d7d9d6;
   color: #101512;
   font-size: 0.9rem;
   text-align: center;
@@ -552,25 +575,25 @@ h2 {
 }
 
 .dues-sheet td {
-  border: 1px solid #2d332f;
-  padding: 0.25rem;
-  background: #f5f5f5;
+  border: 1px solid #c8d0c9;
+  padding: 0.35rem;
+  background: #fbfbfa;
   vertical-align: middle;
 }
 
 .dues-sheet th:nth-child(1),
 .dues-sheet td:nth-child(1) {
-  width: 180px;
+  width: 190px;
 }
 
 .dues-sheet th:nth-child(2),
 .dues-sheet td:nth-child(2) {
-  width: 250px;
+  width: 315px;
 }
 
 .dues-sheet th:nth-child(3),
 .dues-sheet td:nth-child(3) {
-  width: 230px;
+  width: 250px;
 }
 
 .dues-sheet th:nth-child(4),
@@ -593,26 +616,38 @@ h2 {
 
 .dues-sheet th:nth-child(10),
 .dues-sheet td:nth-child(10) {
-  width: 330px;
+  width: 360px;
+}
+
+.dues-sheet th:nth-child(11),
+.dues-sheet td:nth-child(11) {
+  width: 92px;
 }
 
 .dues-sheet input,
 .dues-sheet select,
 .dues-sheet textarea {
   min-height: 2rem;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 4px;
   padding: 0.35rem 0.45rem;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.72);
   box-shadow: none;
+  font-size: 0.88rem;
 }
 
 .dues-member-name {
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .dues-member-name a {
   color: #111815;
+}
+
+.dues-email-input {
+  min-width: 100%;
+  font-size: 0.86rem !important;
 }
 
 .dues-pill {
@@ -644,6 +679,16 @@ h2 {
   width: 1.2rem;
   min-height: 1.2rem;
   accent-color: #111815;
+}
+
+.dues-save {
+  text-align: center;
+}
+
+.dues-save .small-button {
+  width: 100%;
+  min-width: 4.6rem;
+  padding-inline: 0.45rem;
 }
 
 .detail-list {
