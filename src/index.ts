@@ -43,9 +43,12 @@ import {
 import {
   createMemberDuesInvoicePdf,
   getMemberDuesRecord,
+  getMemberDuesSettings,
   listMemberDues,
   memberDuesInvoice,
+  parseMemberDuesSettings,
   parseMemberDuesUpdate,
+  updateMemberDuesSettings,
   updateMemberDuesRecord
 } from "./memberDues.ts";
 import {
@@ -139,6 +142,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/budget/report.pdf", handler: getBudgetReportPdf },
   { method: "GET", path: "/member-dues", handler: getMemberDues },
   { method: "POST", path: "/member-dues/update", handler: postMemberDuesUpdate },
+  { method: "POST", path: "/member-dues/settings", handler: postMemberDuesSettings },
   { method: "GET", path: "/member-dues/member", handler: getMemberDuesMember },
   { method: "GET", path: "/member-dues/invoice.pdf", handler: getMemberDuesInvoicePdf },
   { method: "GET", path: "/journal-entries/new", handler: getNewJournalEntry },
@@ -331,8 +335,11 @@ async function getMemberDues(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  const members = await listMemberDues(env, context.organization.id);
-  return memberDuesPage(env.APP_NAME, context, members);
+  const [members, settings] = await Promise.all([
+    listMemberDues(env, context.organization.id),
+    getMemberDuesSettings(env, context.organization.id)
+  ]);
+  return memberDuesPage(env.APP_NAME, context, members, settings);
 }
 
 async function postMemberDuesUpdate(request: Request, env: Env): Promise<Response> {
@@ -350,15 +357,33 @@ async function postMemberDuesUpdate(request: Request, env: Env): Promise<Respons
   return redirect("/member-dues");
 }
 
+async function postMemberDuesSettings(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  await updateMemberDuesSettings(env, context.organization.id, parseMemberDuesSettings(form));
+  return redirect("/member-dues");
+}
+
 async function getMemberDuesMember(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
   const id = new URL(request.url).searchParams.get("id") ?? "";
-  const member = await getMemberDuesRecord(env, context.organization.id, id);
+  const [member, settings] = await Promise.all([
+    getMemberDuesRecord(env, context.organization.id, id),
+    getMemberDuesSettings(env, context.organization.id)
+  ]);
   if (!member) return redirect("/member-dues");
 
-  return memberDuesDetailPage(env.APP_NAME, context, member);
+  return memberDuesDetailPage(env.APP_NAME, context, member, settings);
 }
 
 async function getMemberDuesInvoicePdf(request: Request, env: Env): Promise<Response> {
@@ -366,10 +391,13 @@ async function getMemberDuesInvoicePdf(request: Request, env: Env): Promise<Resp
   if (context instanceof Response) return context;
 
   const id = new URL(request.url).searchParams.get("id") ?? "";
-  const member = await getMemberDuesRecord(env, context.organization.id, id);
+  const [member, settings] = await Promise.all([
+    getMemberDuesRecord(env, context.organization.id, id),
+    getMemberDuesSettings(env, context.organization.id)
+  ]);
   if (!member) return redirect("/member-dues");
 
-  const pdf = createMemberDuesInvoicePdf(memberDuesInvoice(member), context.organization.name);
+  const pdf = createMemberDuesInvoicePdf(memberDuesInvoice(member, settings), context.organization.name);
   return new Response(pdf, {
     headers: {
       "Content-Type": "application/pdf",
