@@ -280,6 +280,23 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS member_dues_members (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      member_name TEXT NOT NULL,
+      email TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      dues_frequency TEXT NOT NULL DEFAULT '' CHECK (dues_frequency IN ('', 'annual', 'semi_annual', 'quarterly')),
+      invoice_included TEXT NOT NULL DEFAULT '' CHECK (invoice_included IN ('', 'dues_only', 'dues_and_meals')),
+      q1_paid INTEGER NOT NULL DEFAULT 0 CHECK (q1_paid IN (0, 1)),
+      q2_paid INTEGER NOT NULL DEFAULT 0 CHECK (q2_paid IN (0, 1)),
+      q3_paid INTEGER NOT NULL DEFAULT 0 CHECK (q3_paid IN (0, 1)),
+      q4_paid INTEGER NOT NULL DEFAULT 0 CHECK (q4_paid IN (0, 1)),
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
