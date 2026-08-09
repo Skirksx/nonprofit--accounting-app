@@ -938,32 +938,47 @@ export function createStatementOfActivitiesReportPdf(
 ): ArrayBuffer {
   const rotaryLogo = pdfImageFromJpeg(ROTARY_LOGO_JPEG_BASE64, 198, 146);
   const period = reportPeriodLabel(report.filters.startDate, report.filters.endDate);
-  const operations = [
-    pdfFillRect(0, 0, 612, 792, "1 1 1"),
-    pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
-    pdfFillRect(43, 649, 526, 106, "0.98 0.99 1"),
-    pdfFillRect(43, 611, 526, 38, "0.00 0.23 0.47"),
-    pdfFillRect(43, 649, 112, 106, "0.90 0.96 1"),
-    pdfDiagonalLines(),
-    pdfTextAt("Rotary", 336, 704, 34, "F2", "0.00 0.23 0.47"),
-    pdfImageAt("Im1", 445, 680, 88, 65),
-    pdfTextAt(organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
-    pdfCenteredText("STATEMENT OF ACTIVITIES", 16, 624, "F2", "1 1 1"),
-    pdfCenteredText(period, 9, 594, "F1", "0.00 0.23 0.47")
-  ];
+  const pages: string[][] = [];
+  let operations = statementOfActivitiesPdfHeader(organizationName, period, 1);
+  pages.push(operations);
+  let y = 552;
 
-  const afterRevenue = financialReportSection(operations, "REVENUE", report.revenues, report.totalRevenueCents, "TOTAL REVENUE", 552, "income");
-  const afterExpenses = financialReportSection(operations, "EXPENSES", report.expenses, report.totalExpenseCents, "TOTAL EXPENSES", afterRevenue - 28, "expenses");
+  const ensureSpace = (neededHeight: number): void => {
+    if (y - neededHeight >= 70) return;
+    operations.push(pdfCenteredText("Service Above Self", 9, 48, "F3", "0.00 0.23 0.47"));
+    operations = statementOfActivitiesPdfHeader(organizationName, period, pages.length + 1);
+    pages.push(operations);
+    y = 552;
+  };
 
+  const addSection = (title: string, rows: StatementOfActivitiesDetailRow[], totalCents: number, totalLabel: string, icon: "expenses" | "income"): void => {
+    ensureSpace(58);
+    y = statementDetailReportSectionHeader(operations, title, y, icon);
+    if (rows.length === 0) {
+      y = statementDetailReportEmptyRow(operations, y);
+    } else {
+      for (const row of rows) {
+        ensureSpace(16);
+        y = statementDetailReportRow(operations, row, y);
+      }
+    }
+    ensureSpace(18);
+    y = statementDetailReportTotalRow(operations, totalLabel, totalCents, y) - 16;
+  };
+
+  addSection("REVENUE", report.revenueDetails, report.totalRevenueCents, "TOTAL REVENUE", "income");
+  addSection("EXPENSES", report.expenseDetails, report.totalExpenseCents, "TOTAL EXPENSES", "expenses");
+
+  ensureSpace(42);
   operations.push(
-    pdfFillRect(62, afterExpenses - 12, 488, 28, "0.00 0.23 0.47"),
-    pdfTextAt("CHANGE IN NET ASSETS", 178, afterExpenses - 2, 13, "F2", "1 1 1"),
-    pdfTextAt("|", 362, afterExpenses - 2, 13, "F2", "1 1 1"),
-    pdfTextAt(formatMoney(report.changeInNetAssetsCents), 394, afterExpenses - 2, 13, "F2", "1 1 1"),
-    pdfCenteredText("Service Above Self", 9, afterExpenses - 26, "F3", "0.00 0.23 0.47")
+    pdfFillRect(62, y - 12, 488, 28, "0.00 0.23 0.47"),
+    pdfTextAt("CHANGE IN NET ASSETS", 178, y - 2, 13, "F2", "1 1 1"),
+    pdfTextAt("|", 362, y - 2, 13, "F2", "1 1 1"),
+    pdfTextAt(formatMoney(report.changeInNetAssetsCents), 394, y - 2, 13, "F2", "1 1 1"),
+    pdfCenteredText("Service Above Self", 9, y - 26, "F3", "0.00 0.23 0.47")
   );
 
-  return buildSimplePdf(operations.join("\n"), rotaryLogo);
+  return buildSimplePdfPages(pages.map((page) => page.join("\n")), rotaryLogo);
 }
 
 export async function budgetVsActual(
@@ -1354,6 +1369,123 @@ function financialReportSection(
   return y - 20;
 }
 
+function statementOfActivitiesPdfHeader(organizationName: string, period: string, pageNumber: number): string[] {
+  return [
+    pdfFillRect(0, 0, 612, 792, "1 1 1"),
+    pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
+    pdfFillRect(43, 649, 526, 106, "0.98 0.99 1"),
+    pdfFillRect(43, 611, 526, 38, "0.00 0.23 0.47"),
+    pdfFillRect(43, 649, 112, 106, "0.90 0.96 1"),
+    pdfDiagonalLines(),
+    pdfTextAt("Rotary", 336, 704, 34, "F2", "0.00 0.23 0.47"),
+    pdfImageAt("Im1", 445, 680, 88, 65),
+    pdfTextAt(organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
+    pdfCenteredText("STATEMENT OF ACTIVITIES", 16, 624, "F2", "1 1 1"),
+    pdfCenteredText(period, 9, 594, "F1", "0.00 0.23 0.47"),
+    pdfRightText(`Page ${pageNumber}`, 550, 594, 8, "F1", "0.00 0.23 0.47")
+  ];
+}
+
+function statementDetailReportSectionHeader(
+  operations: string[],
+  title: string,
+  topY: number,
+  icon: "expenses" | "income"
+): number {
+  const x = 52;
+  const width = 508;
+  const rowHeight = 16;
+  const dateWidth = 58;
+  const entryWidth = 66;
+  const accountWidth = 54;
+  const nameWidth = 116;
+  const descriptionWidth = 148;
+  const amountWidth = width - dateWidth - entryWidth - accountWidth - nameWidth - descriptionWidth;
+  let y = topY;
+
+  operations.push(
+    ...pdfSectionIcon(x + 20, y + 13, icon),
+    pdfTextAt(title, x + 48, y + 4, 19, "F2", "0.00 0.23 0.47"),
+    pdfFillRect(x + 48, y - 3, width - 48, 2, "0.97 0.67 0.00")
+  );
+  y -= 18;
+
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.00 0.23 0.47"),
+    pdfTableGrid(x, y, width, rowHeight, [dateWidth, entryWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt("Date", x + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Entry", x + dateWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Acct", x + dateWidth + entryWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Name", x + dateWidth + entryWidth + accountWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Description", x + dateWidth + entryWidth + accountWidth + nameWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Amount", x + width - amountWidth + 20, y + 5, 7, "F2", "1 1 1")
+  );
+
+  return y - rowHeight;
+}
+
+function statementDetailReportRow(
+  operations: string[],
+  row: StatementOfActivitiesDetailRow,
+  y: number
+): number {
+  const x = 52;
+  const width = 508;
+  const rowHeight = 14;
+  const dateWidth = 58;
+  const entryWidth = 66;
+  const accountWidth = 54;
+  const nameWidth = 116;
+  const descriptionWidth = 148;
+  const amountWidth = width - dateWidth - entryWidth - accountWidth - nameWidth - descriptionWidth;
+  const description = row.line_description || row.entry_description;
+
+  operations.push(
+    pdfTableGrid(x, y, width, rowHeight, [dateWidth, entryWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTextAt(row.entry_date, x + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(row.entry_number, x + dateWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(row.account_number, x + dateWidth + entryWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(truncatePdfText(row.account_name, 24), x + dateWidth + entryWidth + accountWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(truncatePdfText(description, 33), x + dateWidth + entryWidth + accountWidth + nameWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfRightText(formatMoney(row.amount_cents), x + width - 5, y + 5, 6.3, "F1", "0.10 0.12 0.14")
+  );
+
+  return y - rowHeight;
+}
+
+function statementDetailReportEmptyRow(operations: string[], y: number): number {
+  const x = 52;
+  const width = 508;
+  const rowHeight = 14;
+  operations.push(
+    pdfTableGrid(x, y, width, rowHeight, [width], "0.78 0.86 0.94"),
+    pdfTextAt("No activity.", x + 10, y + 5, 7, "F1", "0.10 0.12 0.14")
+  );
+  return y - rowHeight;
+}
+
+function statementDetailReportTotalRow(
+  operations: string[],
+  totalLabel: string,
+  totalCents: number,
+  y: number
+): number {
+  const x = 52;
+  const width = 508;
+  const rowHeight = 16;
+  operations.push(
+    pdfFillRect(x, y, width, rowHeight, "0.88 0.94 0.98"),
+    pdfTableGrid(x, y, width, rowHeight, [420, 88], "0.78 0.86 0.94"),
+    pdfTextAt(totalLabel, x + 300, y + 5, 8.5, "F2", "0.00 0.23 0.47"),
+    pdfRightText(formatMoney(totalCents), x + width - 8, y + 5, 8.5, "F2", "0.00 0.23 0.47")
+  );
+  return y - rowHeight;
+}
+
+function truncatePdfText(value: string, maxLength: number): string {
+  return value.length > maxLength ? `${value.slice(0, Math.max(0, maxLength - 3))}...` : value;
+}
+
 function reportPeriodLabel(startDate?: string, endDate?: string): string {
   if (startDate && endDate) return `${startDate} to ${endDate}`;
   if (startDate) return `From ${startDate}`;
@@ -1494,7 +1626,18 @@ type PdfImage = {
 };
 
 function buildSimplePdf(stream: string, image?: PdfImage): ArrayBuffer {
+  return buildSimplePdfPages([stream], image);
+}
+
+function buildSimplePdfPages(streams: string[], image?: PdfImage): ArrayBuffer {
   const imageResource = image ? " /XObject << /Im1 8 0 R >>" : "";
+  const pageCount = streams.length;
+  const pageObjectStart = 3;
+  const fontObjectStart = pageObjectStart + pageCount;
+  const contentObjectStart = fontObjectStart + 3;
+  const imageObjectId = contentObjectStart + pageCount;
+  const pageIds = streams.map((_, index) => pageObjectStart + index);
+  const contentIds = streams.map((_, index) => contentObjectStart + index);
   const imageObject = image
     ? [
         binaryObject(
@@ -1505,12 +1648,16 @@ function buildSimplePdf(stream: string, image?: PdfImage): ArrayBuffer {
     : [];
   const objects = [
     textBytes("<< /Type /Catalog /Pages 2 0 R >>"),
-    textBytes("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-    textBytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >>${imageResource} >> /Contents 7 0 R >>`),
+    textBytes(`<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageCount} >>`),
+    ...pageIds.map((pageId, index) =>
+      textBytes(
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontObjectStart} 0 R /F2 ${fontObjectStart + 1} 0 R /F3 ${fontObjectStart + 2} 0 R >>${image ? ` /XObject << /Im1 ${imageObjectId} 0 R >>` : imageResource} >> /Contents ${contentIds[index]} 0 R >>`
+      )
+    ),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>"),
-    binaryObject(`<< /Length ${asciiLength(stream)} >>`, textBytes(stream)),
+    ...streams.map((stream) => binaryObject(`<< /Length ${asciiLength(stream)} >>`, textBytes(stream))),
     ...imageObject
   ];
   let pdf = textBytes("%PDF-1.4\n");
