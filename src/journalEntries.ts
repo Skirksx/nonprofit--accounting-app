@@ -393,9 +393,10 @@ export class JournalEntryValidationError extends Error {
 
 async function nextEntryNumber(env: Env, organizationId: string): Promise<string> {
   const result = await env.DB.prepare(
-    `SELECT COUNT(*) + 1 AS nextNumber
+    `SELECT COALESCE(MAX(CAST(SUBSTR(entry_number, 4) AS INTEGER)), 0) + 1 AS nextNumber
      FROM journal_entries
-     WHERE organization_id = ?`
+     WHERE organization_id = ?
+       AND entry_number LIKE 'JE-%'`
   )
     .bind(organizationId)
     .first<{ nextNumber: number }>();
