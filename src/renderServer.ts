@@ -297,6 +297,17 @@ export async function ensurePostgresSchema(pool: Pool): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS member_dues_settings (
+      id TEXT PRIMARY KEY,
+      organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+      fiscal_year TEXT NOT NULL DEFAULT '2026-2027',
+      quarterly_dues_cents INTEGER NOT NULL DEFAULT 4000 CHECK (quarterly_dues_cents >= 0),
+      meal_cents INTEGER NOT NULL DEFAULT 1100 CHECK (meal_cents >= 0),
+      meeting_day TEXT NOT NULL DEFAULT 'Tuesday',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
