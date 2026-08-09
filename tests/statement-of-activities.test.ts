@@ -613,7 +613,7 @@ test("creates a statement of activities PDF with the Rotary report style", async
         entry_number: "JE-000002",
         entry_date: "2026-05-15",
         entry_description: "Expense: Scholarship payment",
-        line_description: "Scholarship payment",
+        line_description: "Check # 172 Morgan County Junior Fair Board Livestock Sponsorship",
         account_id: "acct_expense",
         account_number: "5100",
         account_name: "College Scholarships",
@@ -632,7 +632,10 @@ test("creates a statement of activities PDF with the Rotary report style", async
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
   assert.match(text, /STATEMENT OF ACTIVITIES/);
   assert.match(text, /Member dues check/);
-  assert.match(text, /Scholarship payment/);
+  assert.doesNotMatch(text, /Entry/);
+  assert.doesNotMatch(text, /JE-000002/);
+  assert.match(text, /Morgan County Junior Fair Board Livestock/);
+  assert.match(text, /Sponsorship/);
   assert.match(text, /CHANGE IN NET ASSETS/);
 });
 
