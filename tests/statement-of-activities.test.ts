@@ -593,8 +593,34 @@ test("creates a statement of activities PDF with the Rotary report style", async
         amount_cents: 400000
       }
     ],
-    revenueDetails: [],
-    expenseDetails: [],
+    revenueDetails: [
+      {
+        entry_id: "je_1",
+        entry_number: "JE-000001",
+        entry_date: "2026-05-01",
+        entry_description: "Income: Member dues",
+        line_description: "Member dues check",
+        account_id: "acct_revenue",
+        account_number: "4000",
+        account_name: "Member Dues",
+        account_type: "revenue" as const,
+        amount_cents: 416000
+      }
+    ],
+    expenseDetails: [
+      {
+        entry_id: "je_2",
+        entry_number: "JE-000002",
+        entry_date: "2026-05-15",
+        entry_description: "Expense: Scholarship payment",
+        line_description: "Scholarship payment",
+        account_id: "acct_expense",
+        account_number: "5100",
+        account_name: "College Scholarships",
+        account_type: "expense" as const,
+        amount_cents: 400000
+      }
+    ],
     totalRevenueCents: 416000,
     totalExpenseCents: 400000,
     changeInNetAssetsCents: 16000
@@ -605,6 +631,8 @@ test("creates a statement of activities PDF with the Rotary report style", async
 
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
   assert.match(text, /STATEMENT OF ACTIVITIES/);
+  assert.match(text, /Member dues check/);
+  assert.match(text, /Scholarship payment/);
   assert.match(text, /CHANGE IN NET ASSETS/);
 });
 
