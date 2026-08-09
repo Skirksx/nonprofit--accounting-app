@@ -4,8 +4,10 @@ import test from "node:test";
 import {
   createMemberDuesInvoicePdf,
   memberDuesInvoice,
+  parseMemberDuesSettings,
   parseMemberDuesUpdate,
-  type MemberDuesRecord
+  type MemberDuesRecord,
+  type MemberDuesSettings
 } from "../src/memberDues.ts";
 
 test("parses member dues spreadsheet updates", () => {
@@ -28,6 +30,21 @@ test("parses member dues spreadsheet updates", () => {
   assert.equal(result.q2_paid, 0);
 });
 
+test("parses member dues fiscal year settings", () => {
+  const form = new FormData();
+  form.set("fiscalYear", "2026-2027");
+  form.set("quarterlyDues", "40.00");
+  form.set("mealAmount", "11.00");
+  form.set("meetingDay", "Tuesday");
+
+  const result = parseMemberDuesSettings(form);
+
+  assert.equal(result.fiscal_year, "2026-2027");
+  assert.equal(result.quarterly_dues_cents, 4000);
+  assert.equal(result.meal_cents, 1100);
+  assert.equal(result.meeting_day, "Tuesday");
+});
+
 test("creates member dues invoice PDF", () => {
   const member: MemberDuesRecord = {
     id: "dues_1",
@@ -44,13 +61,22 @@ test("creates member dues invoice PDF", () => {
     notes: ""
   };
 
-  const invoice = memberDuesInvoice(member);
+  const settings: MemberDuesSettings = {
+    id: "settings_1",
+    organization_id: "org_1",
+    fiscal_year: "2026-2027",
+    quarterly_dues_cents: 4000,
+    meal_cents: 1100,
+    meeting_day: "Tuesday"
+  };
+
+  const invoice = memberDuesInvoice(member, settings);
   const pdf = Buffer.from(createMemberDuesInvoicePdf(invoice, "Malta & McConnelsville Rotary Club"));
   const text = new TextDecoder().decode(pdf);
 
-  assert.equal(invoice.totalCents, 10000);
+  assert.equal(invoice.totalCents, 18300);
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
   assert.match(text, /Member Dues Invoice/);
   assert.match(text, /Quarterly member dues/);
-  assert.match(text, /Quarterly meals/);
+  assert.match(text, /Quarterly meals at \$11.00 per Tuesday meeting/);
 });
