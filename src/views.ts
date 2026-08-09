@@ -12,6 +12,7 @@ import type {
   Fund,
   FundActivityReport,
   IncomeStatementReport,
+  StatementOfActivitiesDetailRow,
   StatementOfActivitiesReport,
   StatementOfActivitiesRow
 } from "./reports.ts";
@@ -972,6 +973,7 @@ export function statementOfActivitiesPage(
           </select>
         </label>
         <div class="form-actions">
+          ${report ? `<a class="button-like" href="${escapeHtml(statementOfActivitiesPdfUrl(report))}">Print statement PDF</a>` : ""}
           <button type="submit">Run report</button>
         </div>
       </form>
@@ -979,10 +981,10 @@ export function statementOfActivitiesPage(
         report
           ? `<section class="content-band report-section">
               <h2>Revenue</h2>
-              ${statementRowsTable(report.revenues)}
+              ${statementDetailRowsTable(report.revenueDetails)}
               ${reportTotal("Total revenue", report.totalRevenueCents)}
               <h2>Expenses</h2>
-              ${statementRowsTable(report.expenses)}
+              ${statementDetailRowsTable(report.expenseDetails)}
               ${reportTotal("Total expenses", report.totalExpenseCents)}
               <div class="report-net">
                 <span>Change in net assets</span>
@@ -1572,6 +1574,31 @@ function statementRowsTable(rows: StatementOfActivitiesRow[]): string {
   </div>`;
 }
 
+function statementDetailRowsTable(rows: StatementOfActivitiesDetailRow[]): string {
+  const body = rows.length
+    ? rows
+        .map((row) => {
+          const description = row.line_description || row.entry_description;
+          return `<tr>
+            <td>${escapeHtml(row.entry_date)}</td>
+            <td>${escapeHtml(row.entry_number)}</td>
+            <td>${escapeHtml(row.account_number)}</td>
+            <td>${escapeHtml(row.account_name)}</td>
+            <td>${escapeHtml(description)}</td>
+            <td class="amount">${formatMoney(row.amount_cents)}</td>
+          </tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="6" class="empty">No activity.</td></tr>`;
+
+  return `<div class="table-wrap report-table">
+    <table>
+      <thead><tr><th>Date</th><th>Entry</th><th>Account</th><th>Name</th><th>Description</th><th>Amount</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
 function financialRowsTable(rows: FinancialReportRow[]): string {
   const body = rows.length
     ? rows
@@ -1713,6 +1740,15 @@ function incomeStatementPdfUrl(report: IncomeStatementReport): string {
   if (report.filters.fundId) params.set("fundId", report.filters.fundId);
   const query = params.toString();
   return `/reports/income-statement.pdf${query ? `?${query}` : ""}`;
+}
+
+function statementOfActivitiesPdfUrl(report: StatementOfActivitiesReport): string {
+  const params = new URLSearchParams();
+  if (report.filters.startDate) params.set("startDate", report.filters.startDate);
+  if (report.filters.endDate) params.set("endDate", report.filters.endDate);
+  if (report.filters.fundId) params.set("fundId", report.filters.fundId);
+  const query = params.toString();
+  return `/reports/statement-of-activities.pdf${query ? `?${query}` : ""}`;
 }
 
 function reportTotal(label: string, amountCents: number): string {
