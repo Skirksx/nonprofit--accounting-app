@@ -958,7 +958,7 @@ export function createStatementOfActivitiesReportPdf(
       y = statementDetailReportEmptyRow(operations, y);
     } else {
       for (const row of rows) {
-        ensureSpace(16);
+        ensureSpace(statementDetailReportRowHeight(row) + 2);
         y = statementDetailReportRow(operations, row, y);
       }
     }
@@ -1396,11 +1396,10 @@ function statementDetailReportSectionHeader(
   const width = 508;
   const rowHeight = 16;
   const dateWidth = 58;
-  const entryWidth = 66;
   const accountWidth = 54;
   const nameWidth = 116;
-  const descriptionWidth = 148;
-  const amountWidth = width - dateWidth - entryWidth - accountWidth - nameWidth - descriptionWidth;
+  const amountWidth = 72;
+  const descriptionWidth = width - dateWidth - accountWidth - nameWidth - amountWidth;
   let y = topY;
 
   operations.push(
@@ -1412,12 +1411,11 @@ function statementDetailReportSectionHeader(
 
   operations.push(
     pdfFillRect(x, y, width, rowHeight, "0.00 0.23 0.47"),
-    pdfTableGrid(x, y, width, rowHeight, [dateWidth, entryWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTableGrid(x, y, width, rowHeight, [dateWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
     pdfTextAt("Date", x + 10, y + 5, 7, "F2", "1 1 1"),
-    pdfTextAt("Entry", x + dateWidth + 10, y + 5, 7, "F2", "1 1 1"),
-    pdfTextAt("Acct", x + dateWidth + entryWidth + 10, y + 5, 7, "F2", "1 1 1"),
-    pdfTextAt("Name", x + dateWidth + entryWidth + accountWidth + 10, y + 5, 7, "F2", "1 1 1"),
-    pdfTextAt("Transaction description", x + dateWidth + entryWidth + accountWidth + nameWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Acct", x + dateWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Name", x + dateWidth + accountWidth + 10, y + 5, 7, "F2", "1 1 1"),
+    pdfTextAt("Transaction description", x + dateWidth + accountWidth + nameWidth + 10, y + 5, 7, "F2", "1 1 1"),
     pdfTextAt("Amount", x + width - amountWidth + 20, y + 5, 7, "F2", "1 1 1")
   );
 
@@ -1431,26 +1429,32 @@ function statementDetailReportRow(
 ): number {
   const x = 52;
   const width = 508;
-  const rowHeight = 14;
+  const rowHeight = statementDetailReportRowHeight(row);
   const dateWidth = 58;
-  const entryWidth = 66;
   const accountWidth = 54;
   const nameWidth = 116;
-  const descriptionWidth = 148;
-  const amountWidth = width - dateWidth - entryWidth - accountWidth - nameWidth - descriptionWidth;
+  const amountWidth = 72;
+  const descriptionWidth = width - dateWidth - accountWidth - nameWidth - amountWidth;
   const description = row.line_description || row.entry_description;
+  const descriptionLines = wrapPdfText(description, 55);
 
   operations.push(
-    pdfTableGrid(x, y, width, rowHeight, [dateWidth, entryWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
+    pdfTableGrid(x, y, width, rowHeight, [dateWidth, accountWidth, nameWidth, descriptionWidth, amountWidth], "0.78 0.86 0.94"),
     pdfTextAt(row.entry_date, x + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
-    pdfTextAt(row.entry_number, x + dateWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
-    pdfTextAt(row.account_number, x + dateWidth + entryWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
-    pdfTextAt(truncatePdfText(row.account_name, 24), x + dateWidth + entryWidth + accountWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
-    pdfTextAt(truncatePdfText(description, 33), x + dateWidth + entryWidth + accountWidth + nameWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(row.account_number, x + dateWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    pdfTextAt(truncatePdfText(row.account_name, 24), x + dateWidth + accountWidth + 5, y + 5, 6.3, "F1", "0.10 0.12 0.14"),
+    ...descriptionLines.map((line, index) =>
+      pdfTextAt(line, x + dateWidth + accountWidth + nameWidth + 5, y + 5 + index * 8, 6.3, "F1", "0.10 0.12 0.14")
+    ),
     pdfRightText(formatMoney(row.amount_cents), x + width - 5, y + 5, 6.3, "F1", "0.10 0.12 0.14")
   );
 
   return y - rowHeight;
+}
+
+function statementDetailReportRowHeight(row: StatementOfActivitiesDetailRow): number {
+  const description = row.line_description || row.entry_description;
+  return Math.max(14, wrapPdfText(description, 55).length * 8 + 6);
 }
 
 function statementDetailReportEmptyRow(operations: string[], y: number): number {
@@ -1484,6 +1488,26 @@ function statementDetailReportTotalRow(
 
 function truncatePdfText(value: string, maxLength: number): string {
   return value.length > maxLength ? `${value.slice(0, Math.max(0, maxLength - 3))}...` : value;
+}
+
+function wrapPdfText(value: string, maxLineLength: number): string[] {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [""];
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxLineLength) {
+      current = next;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word;
+  }
+
+  if (current) lines.push(current);
+  return lines;
 }
 
 function reportPeriodLabel(startDate?: string, endDate?: string): string {
