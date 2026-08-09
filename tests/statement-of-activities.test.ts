@@ -2,16 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  accountRegister,
+  accountRegisterCsv,
   balanceSheet,
   budgetReport,
   budgetVsActual,
   createBudgetReportPdf,
   createIncomeStatementReportPdf,
+  createStatementOfActivitiesReportPdf,
   fundActivityCsv,
   fundActivityReport,
   incomeStatement,
   listBudgetLines,
   listFunds,
+  parseAccountRegisterFilters,
   parseBalanceSheetFilters,
   parseBudgetVsActualFilters,
   parseFinancialReportFilters,
@@ -57,6 +61,31 @@ test("parses balance sheet filters", () => {
     organizationId: "org_1",
     asOfDate: "2026-06-30",
     fundId: "fund_1"
+  });
+});
+
+test("parses account register filters", () => {
+  const url = new URL("https://example.test/reports/account-register?accountId=acct_cash&startDate=2026-07-01&endDate=2026-07-31");
+
+  const filters = parseAccountRegisterFilters(url, "org_1");
+
+  assert.deepEqual(filters, {
+    organizationId: "org_1",
+    accountId: "acct_cash",
+    startDate: "2026-07-01",
+    endDate: "2026-07-31"
+  });
+});
+
+test("rejects invalid account register date range", () => {
+  const url = new URL("https://example.test/reports/account-register?accountId=acct_cash&startDate=2026-08-01&endDate=2026-07-31");
+
+  const filters = parseAccountRegisterFilters(url, "org_1");
+
+  assert.deepEqual(filters, {
+    errors: {
+      endDate: "End date must be on or after the start date."
+    }
   });
 });
 
@@ -144,6 +173,45 @@ test("builds fund activity with income, expenses, and running balance", async ()
           account_type: "expense",
           amount_cents: 40000
         }
+      ],
+      [
+        {
+          entry_id: "je_3",
+          entry_number: "JE-0003",
+          entry_date: "2026-07-10",
+          entry_description: "Income: Draft Front Street Fest pledge",
+          line_description: "Draft Front Street Fest pledge",
+          account_number: "4000",
+          account_name: "Event Income",
+          account_type: "revenue",
+          amount_cents: 50000
+        }
+      ],
+      [
+        {
+          entry_id: "je_1",
+          entry_number: "JE-000001",
+          entry_date: "2026-01-15",
+          entry_description: "Income: Annual contribution",
+          line_description: "Annual contribution",
+          account_id: "acct_revenue",
+          account_number: "4000",
+          account_name: "Contributions",
+          account_type: "revenue",
+          amount_cents: 150000
+        },
+        {
+          entry_id: "je_2",
+          entry_number: "JE-000002",
+          entry_date: "2026-02-01",
+          entry_description: "Expense: Program supplies",
+          line_description: "Supplies for service project",
+          account_id: "acct_expense",
+          account_number: "5100",
+          account_name: "Program Supplies",
+          account_type: "expense",
+          amount_cents: 25000
+        }
       ]
     ]
   });
@@ -154,9 +222,12 @@ test("builds fund activity with income, expenses, and running balance", async ()
   assert.equal(report.fund.name, "Front Street Fest");
   assert.equal(report.totalIncomeCents, 250000);
   assert.equal(report.totalExpenseCents, 40000);
+  assert.equal(report.draftIncomeCents, 50000);
+  assert.equal(report.draftExpenseCents, 0);
   assert.equal(report.balanceCents, 210000);
   assert.equal(report.rows[0].running_balance_cents, 250000);
   assert.equal(report.rows[1].running_balance_cents, 210000);
+  assert.equal(report.draftRows[0].running_balance_cents, 0);
 });
 
 test("exports fund activity to CSV", async () => {
@@ -169,7 +240,10 @@ test("exports fund activity to CSV", async () => {
     },
     totalIncomeCents: 250000,
     totalExpenseCents: 40000,
+    draftIncomeCents: 0,
+    draftExpenseCents: 0,
     balanceCents: 210000,
+    draftRows: [],
     rows: [
       {
         entry_id: "je_1",
@@ -233,6 +307,32 @@ test("builds a balance sheet from posted journal balances", async () => {
           account_type: "expense",
           amount_cents: 25000
         }
+      ],
+      [
+        {
+          entry_id: "je_1",
+          entry_number: "JE-000001",
+          entry_date: "2026-01-15",
+          entry_description: "Income: Annual contribution",
+          line_description: "Annual contribution",
+          account_id: "acct_revenue",
+          account_number: "4000",
+          account_name: "Contributions",
+          account_type: "revenue",
+          amount_cents: 150000
+        },
+        {
+          entry_id: "je_2",
+          entry_number: "JE-000002",
+          entry_date: "2026-02-01",
+          entry_description: "Expense: Program supplies",
+          line_description: "Supplies for service project",
+          account_id: "acct_expense",
+          account_number: "5100",
+          account_name: "Program Supplies",
+          account_type: "expense",
+          amount_cents: 25000
+        }
       ]
     ]
   });
@@ -244,6 +344,96 @@ test("builds a balance sheet from posted journal balances", async () => {
   assert.equal(report.operatingChangeCents, 50000);
   assert.equal(report.totalLiabilitiesAndNetAssetsCents, 250000);
   assert.match(env.calls[0].sql, /accounts.account_type IN/);
+});
+
+test("builds an account register with deposits, payments, and running balance", async () => {
+  const env = mockEnv({
+    firstResults: [
+      {
+        id: "acct_cash",
+        account_number: "1000",
+        account_name: "CNB Bank Account",
+        account_type: "asset"
+      },
+      {
+        amount_cents: 10000
+      }
+    ],
+    allResults: [
+      [
+        {
+          entry_id: "je_1",
+          entry_number: "JE-0001",
+          entry_date: "2026-07-01",
+          entry_description: "Deposit: Front Street Fest",
+          line_description: "Front Street Fest check",
+          debit_amount_cents: 25000,
+          credit_amount_cents: 0
+        },
+        {
+          entry_id: "je_2",
+          entry_number: "JE-0002",
+          entry_date: "2026-07-05",
+          entry_description: "Payment: supplies",
+          line_description: "Event supplies",
+          debit_amount_cents: 0,
+          credit_amount_cents: 5000
+        }
+      ]
+    ]
+  });
+
+  const report = await accountRegister(env, {
+    organizationId: "org_1",
+    accountId: "acct_cash",
+    startDate: "2026-07-01",
+    endDate: "2026-07-31"
+  });
+
+  assert.ok(report);
+  assert.equal(report.account.account_name, "CNB Bank Account");
+  assert.equal(report.totalDebitsCents, 25000);
+  assert.equal(report.totalCreditsCents, 5000);
+  assert.equal(report.rows[0].running_balance_cents, 35000);
+  assert.equal(report.rows[1].running_balance_cents, 30000);
+  assert.equal(report.endingBalanceCents, 30000);
+});
+
+test("exports account register to CSV", () => {
+  const csv = accountRegisterCsv({
+    filters: {
+      organizationId: "org_1",
+      accountId: "acct_cash",
+      startDate: "2026-07-01",
+      endDate: "2026-07-31"
+    },
+    account: {
+      id: "acct_cash",
+      account_number: "1000",
+      account_name: "CNB Bank Account",
+      account_type: "asset"
+    },
+    totalDebitsCents: 25000,
+    totalCreditsCents: 5000,
+    endingBalanceCents: 30000,
+    rows: [
+      {
+        entry_id: "je_1",
+        entry_number: "JE-0001",
+        entry_date: "2026-07-01",
+        entry_description: "Deposit: Front Street Fest",
+        line_description: "Front Street Fest check",
+        debit_amount_cents: 25000,
+        credit_amount_cents: 0,
+        change_cents: 25000,
+        running_balance_cents: 35000
+      }
+    ]
+  });
+
+  assert.match(csv, /^date,entry_number,description,debit,credit,change,running_balance/);
+  assert.match(csv, /Front Street Fest check/);
+  assert.match(csv, /350.00/);
 });
 
 test("builds an income statement from posted journal activity", async () => {
@@ -331,6 +521,32 @@ test("builds statement of activities from posted journal lines", async () => {
           account_type: "expense",
           amount_cents: 25000
         }
+      ],
+      [
+        {
+          entry_id: "je_1",
+          entry_number: "JE-000001",
+          entry_date: "2026-01-15",
+          entry_description: "Income: Annual contribution",
+          line_description: "Annual contribution",
+          account_id: "acct_revenue",
+          account_number: "4000",
+          account_name: "Contributions",
+          account_type: "revenue",
+          amount_cents: 150000
+        },
+        {
+          entry_id: "je_2",
+          entry_number: "JE-000002",
+          entry_date: "2026-02-01",
+          entry_description: "Expense: Program supplies",
+          line_description: "Supplies for service project",
+          account_id: "acct_expense",
+          account_number: "5100",
+          account_name: "Program Supplies",
+          account_type: "expense",
+          amount_cents: 25000
+        }
       ]
     ]
   });
@@ -345,9 +561,51 @@ test("builds statement of activities from posted journal lines", async () => {
   assert.equal(report.totalRevenueCents, 150000);
   assert.equal(report.totalExpenseCents, 25000);
   assert.equal(report.changeInNetAssetsCents, 125000);
+  assert.equal(report.revenueDetails[0].line_description, "Annual contribution");
+  assert.equal(report.expenseDetails[0].line_description, "Supplies for service project");
   assert.match(env.calls[0].sql, /journal_entries.status = 'posted'/);
   assert.match(env.calls[0].sql, /journal_entry_lines.fund_id = \?/);
   assert.deepEqual(env.calls[0].bindings, ["org_1", "2026-01-01", "2026-12-31", "fund_1"]);
+});
+
+test("creates a statement of activities PDF with the Rotary report style", async () => {
+  const report = {
+    filters: {
+      organizationId: "org_1",
+      startDate: "2025-07-01",
+      endDate: "2026-06-30"
+    },
+    revenues: [
+      {
+        account_id: "acct_revenue",
+        account_number: "4000",
+        account_name: "Member Dues",
+        account_type: "revenue" as const,
+        amount_cents: 416000
+      }
+    ],
+    expenses: [
+      {
+        account_id: "acct_expense",
+        account_number: "5100",
+        account_name: "College Scholarships",
+        account_type: "expense" as const,
+        amount_cents: 400000
+      }
+    ],
+    revenueDetails: [],
+    expenseDetails: [],
+    totalRevenueCents: 416000,
+    totalExpenseCents: 400000,
+    changeInNetAssetsCents: 16000
+  };
+
+  const pdf = Buffer.from(createStatementOfActivitiesReportPdf(report, "Malta & McConnelsville Rotary Club"));
+  const text = new TextDecoder().decode(pdf);
+
+  assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
+  assert.match(text, /STATEMENT OF ACTIVITIES/);
+  assert.match(text, /CHANGE IN NET ASSETS/);
 });
 
 test("validates a budget line for revenue and expense accounts", () => {
