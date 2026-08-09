@@ -1147,6 +1147,7 @@ async function getStatementOfActivitiesPdf(request: Request, env: Env): Promise<
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="statement-of-activities.pdf"`,
+      "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff"
     }
   });
