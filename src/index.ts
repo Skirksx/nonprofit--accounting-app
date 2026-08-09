@@ -10,6 +10,7 @@ import {
   validateCsrf
 } from "./auth.ts";
 import { hashPassword, randomId } from "./crypto.ts";
+import { getAccountRegister, getAccountRegisterCsv } from "./accountRegisterReport.ts";
 import {
   createDraftJournalEntry,
   deleteJournalEntry,
@@ -46,6 +47,7 @@ import {
   createBudgetReportPdf,
   createBudgetLine,
   createIncomeStatementReportPdf,
+  createStatementOfActivitiesReportPdf,
   createFund,
   deleteBudgetLine,
   fundActivityCsv,
@@ -147,11 +149,14 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
+  { method: "GET", path: "/reports/account-register", handler: getAccountRegister },
+  { method: "GET", path: "/reports/account-register.csv", handler: getAccountRegisterCsv },
   { method: "GET", path: "/reports/income-statement", handler: getIncomeStatement },
   { method: "GET", path: "/reports/income-statement.pdf", handler: getIncomeStatementPdf },
   { method: "GET", path: "/reports/budget-vs-actual", handler: getBudgetVsActual },
   { method: "POST", path: "/reports/budget-lines", handler: postBudgetLines },
   { method: "GET", path: "/reports/statement-of-activities", handler: getStatementOfActivities },
+  { method: "GET", path: "/reports/statement-of-activities.pdf", handler: getStatementOfActivitiesPdf },
   { method: "GET", path: "/transactions/new", handler: getNewTransaction },
   { method: "POST", path: "/transactions", handler: postTransaction },
   { method: "GET", path: "/assets/styles.css", handler: getStyles }
@@ -1126,6 +1131,25 @@ async function getStatementOfActivities(request: Request, env: Env): Promise<Res
 
   const report = await statementOfActivities(env, filters);
   return statementOfActivitiesPage(env.APP_NAME, context, funds, report);
+}
+
+async function getStatementOfActivitiesPdf(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const url = new URL(request.url);
+  const filters = parseStatementOfActivitiesFilters(url, context.organization.id);
+  if ("errors" in filters) return redirect("/reports/statement-of-activities");
+
+  const report = await statementOfActivities(env, filters);
+  const pdf = createStatementOfActivitiesReportPdf(report, context.organization.name);
+  return new Response(pdf, {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="statement-of-activities.pdf"`,
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
 }
 
 function getStyles(): Response {
