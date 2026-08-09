@@ -123,6 +123,18 @@ test("creates a draft journal entry with one header and multiple lines", async (
   ]);
 });
 
+test("numbers new journal entries from the highest JE number instead of total entries", async () => {
+  const env = mockEnv({
+    firstResults: [{ nextNumber: 246 }]
+  });
+
+  await createDraftJournalEntry(env, balancedInput);
+
+  assert.match(env.calls[0].sql, /MAX\(CAST\(SUBSTR\(entry_number, 4\) AS INTEGER\)\)/);
+  assert.match(env.calls[0].sql, /entry_number LIKE 'JE-%'/);
+  assert.deepEqual(env.batchCalls[0][0].bindings.slice(1, 3), ["org_1", "JE-000246"]);
+});
+
 test("posts a balanced draft journal entry", async () => {
   const env = mockEnv({
     firstResults: [
