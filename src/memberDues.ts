@@ -21,14 +21,28 @@ export type MemberDuesRecord = {
 
 export type MemberDuesUpdate = Omit<MemberDuesRecord, "organization_id">;
 
+export type MemberDuesSettings = {
+  id: string;
+  organization_id: string;
+  fiscal_year: string;
+  quarterly_dues_cents: number;
+  meal_cents: number;
+  meeting_day: string;
+};
+
 export type MemberInvoice = {
   member: MemberDuesRecord;
-  fiscalYear: string;
+  settings: MemberDuesSettings;
   lineItems: Array<{ description: string; amountCents: number }>;
   totalCents: number;
 };
 
-const FISCAL_YEAR = "2026-2027";
+const DEFAULT_SETTINGS: Omit<MemberDuesSettings, "id" | "organization_id"> = {
+  fiscal_year: "2026-2027",
+  quarterly_dues_cents: 4000,
+  meal_cents: 1100,
+  meeting_day: "Tuesday"
+};
 
 const seedMembers: Array<Omit<MemberDuesRecord, "id" | "organization_id">> = [
   member("Bates, Trish", "tbates@highlandoakshc.com", "4114 Highway 376\nMcConnelsville, OH 43756", "annual", "dues_only"),
@@ -75,6 +89,22 @@ export async function listMemberDues(env: Env, organizationId: string): Promise<
   return result.results ?? [];
 }
 
+export async function getMemberDuesSettings(env: Env, organizationId: string): Promise<MemberDuesSettings> {
+  await seedMemberDuesSettingsIfEmpty(env, organizationId);
+  const settings = await env.DB.prepare(
+    `SELECT *
+     FROM member_dues_settings
+     WHERE organization_id = ?
+     ORDER BY created_at DESC
+     LIMIT 1`
+  )
+    .bind(organizationId)
+    .first<MemberDuesSettings>();
+
+  if (!settings) throw new Error("Member dues settings could not be loaded.");
+  return settings;
+}
+
 export async function getMemberDuesRecord(env: Env, organizationId: string, id: string): Promise<MemberDuesRecord | null> {
   await seedMemberDuesIfEmpty(env, organizationId);
   return env.DB.prepare(
@@ -119,6 +149,28 @@ export async function updateMemberDuesRecord(env: Env, organizationId: string, d
     .run();
 }
 
+export async function updateMemberDuesSettings(env: Env, organizationId: string, settings: Omit<MemberDuesSettings, "id" | "organization_id">): Promise<void> {
+  const current = await getMemberDuesSettings(env, organizationId);
+  await env.DB.prepare(
+    `UPDATE member_dues_settings
+     SET fiscal_year = ?,
+       quarterly_dues_cents = ?,
+       meal_cents = ?,
+       meeting_day = ?,
+       updated_at = CURRENT_TIMESTAMP
+     WHERE organization_id = ? AND id = ?`
+  )
+    .bind(
+      settings.fiscal_year,
+      settings.quarterly_dues_cents,
+      settings.meal_cents,
+      settings.meeting_day,
+      organizationId,
+      current.id
+    )
+    .run();
+}
+
 export function parseMemberDuesUpdate(form: FormData): MemberDuesUpdate {
   return {
     id: stringField(form, "id"),
@@ -135,16 +187,25 @@ export function parseMemberDuesUpdate(form: FormData): MemberDuesUpdate {
   };
 }
 
-export function memberDuesInvoice(member: MemberDuesRecord): MemberInvoice {
-  const duesCents = duesAmountCents(member.dues_frequency);
-  const mealsCents = member.invoice_included === "dues_and_meals" ? mealsAmountCents(member.dues_frequency) : 0;
+export function parseMemberDuesSettings(form: FormData): Omit<MemberDuesSettings, "id" | "organization_id"> {
+  return {
+    fiscal_year: stringField(form, "fiscalYear") || DEFAULT_SETTINGS.fiscal_year,
+    quarterly_dues_cents: moneyToCents(stringField(form, "quarterlyDues")) ?? DEFAULT_SETTINGS.quarterly_dues_cents,
+    meal_cents: moneyToCents(stringField(form, "mealAmount")) ?? DEFAULT_SETTINGS.meal_cents,
+    meeting_day: stringField(form, "meetingDay") || DEFAULT_SETTINGS.meeting_day
+  };
+}
+
+export function memberDuesInvoice(member: MemberDuesRecord, settings: MemberDuesSettings): MemberInvoice {
+  const duesCents = duesAmountCents(member.dues_frequency, settings);
+  const mealsCents = member.invoice_included === "dues_and_meals" ? mealsAmountCents(member.dues_frequency, settings) : 0;
   const lineItems = [
     { description: `${frequencyLabel(member.dues_frequency)} member dues`, amountCents: duesCents },
-    ...(mealsCents > 0 ? [{ description: `${frequencyLabel(member.dues_frequency)} meals`, amountCents: mealsCents }] : [])
+    ...(mealsCents > 0 ? [{ description: `${frequencyLabel(member.dues_frequency)} meals at ${formatMoney(settings.meal_cents)} per ${settings.meeting_day} meeting`, amountCents: mealsCents }] : [])
   ];
   return {
     member,
-    fiscalYear: FISCAL_YEAR,
+    settings,
     lineItems,
     totalCents: lineItems.reduce((sum, item) => sum + item.amountCents, 0)
   };
@@ -157,7 +218,7 @@ export function createMemberDuesInvoicePdf(invoice: MemberInvoice, organizationN
     pdfFillRect(42, 656, 528, 92, "0.09 0.27 0.56"),
     pdfTextAt(organizationName, 72, 706, 18, "F2", "1 1 1"),
     pdfTextAt("Member Dues Invoice", 72, 676, 28, "F2", "1 1 1"),
-    pdfTextAt(`Fiscal year ${invoice.fiscalYear}`, 72, 640, 11, "F1", "0.09 0.27 0.56"),
+    pdfTextAt(`Fiscal year ${invoice.settings.fiscal_year}`, 72, 640, 11, "F1", "0.09 0.27 0.56"),
     pdfTextAt("Bill to", 72, 596, 12, "F2", "0.09 0.27 0.56"),
     ...addressLines(invoice.member).flatMap((line, index) => [
       pdfTextAt(line, 72, 576 - index * 16, 11, index === 0 ? "F2" : "F1", "0.10 0.12 0.14")
@@ -188,11 +249,11 @@ export function createMemberDuesInvoicePdf(invoice: MemberInvoice, organizationN
 }
 
 export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
-  const subject = `M&M Rotary Club dues invoice ${invoice.fiscalYear}`;
+  const subject = `M&M Rotary Club dues invoice ${invoice.settings.fiscal_year}`;
   const body = [
     `Hello ${invoice.member.member_name.split("\n")[0]},`,
     "",
-    `Attached is your M&M Rotary Club dues invoice for fiscal year ${invoice.fiscalYear}.`,
+    `Attached is your M&M Rotary Club dues invoice for fiscal year ${invoice.settings.fiscal_year}.`,
     `Amount due: ${formatMoney(invoice.totalCents)}`,
     "",
     "Thank you,"
@@ -257,6 +318,36 @@ async function seedMemberDuesIfEmpty(env: Env, organizationId: string): Promise<
   );
 }
 
+async function seedMemberDuesSettingsIfEmpty(env: Env, organizationId: string): Promise<void> {
+  const row = await env.DB.prepare(
+    "SELECT COUNT(*) AS setting_count FROM member_dues_settings WHERE organization_id = ?"
+  )
+    .bind(organizationId)
+    .first<{ setting_count?: number; settingCount?: number }>();
+  const count = row?.setting_count ?? row?.settingCount ?? 0;
+  if (count > 0) return;
+
+  await env.DB.prepare(
+    `INSERT INTO member_dues_settings (
+      id,
+      organization_id,
+      fiscal_year,
+      quarterly_dues_cents,
+      meal_cents,
+      meeting_day
+    ) VALUES (?, ?, ?, ?, ?, ?)`
+  )
+    .bind(
+      randomId("dues_settings"),
+      organizationId,
+      DEFAULT_SETTINGS.fiscal_year,
+      DEFAULT_SETTINGS.quarterly_dues_cents,
+      DEFAULT_SETTINGS.meal_cents,
+      DEFAULT_SETTINGS.meeting_day
+    )
+    .run();
+}
+
 function member(
   member_name: string,
   email: string,
@@ -280,17 +371,17 @@ function member(
   };
 }
 
-function duesAmountCents(value: DuesFrequency): number {
-  if (value === "quarterly") return 4000;
-  if (value === "semi_annual") return 8000;
-  if (value === "annual") return 16000;
+function duesAmountCents(value: DuesFrequency, settings: MemberDuesSettings): number {
+  if (value === "quarterly") return settings.quarterly_dues_cents;
+  if (value === "semi_annual") return settings.quarterly_dues_cents * 2;
+  if (value === "annual") return settings.quarterly_dues_cents * 4;
   return 0;
 }
 
-function mealsAmountCents(value: DuesFrequency): number {
-  if (value === "quarterly") return 6000;
-  if (value === "semi_annual") return 12000;
-  if (value === "annual") return 24000;
+function mealsAmountCents(value: DuesFrequency, settings: MemberDuesSettings): number {
+  if (value === "quarterly") return settings.meal_cents * 13;
+  if (value === "semi_annual") return settings.meal_cents * 26;
+  if (value === "annual") return settings.meal_cents * 52;
   return 0;
 }
 
@@ -314,6 +405,12 @@ function invoiceIncludedField(form: FormData, name: string): InvoiceIncluded {
 
 function checkedField(form: FormData, name: string): number {
   return form.get(name) === "on" ? 1 : 0;
+}
+
+function moneyToCents(value: string): number | null {
+  const normalized = value.replaceAll("$", "").replaceAll(",", "").trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
+  return Math.round(Number(normalized) * 100);
 }
 
 function formatMoney(amountCents: number): string {
