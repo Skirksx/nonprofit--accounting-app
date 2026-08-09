@@ -6,7 +6,8 @@ import {
   invoiceIncludedLabel,
   memberDuesInvoice,
   memberInvoiceEmailHref,
-  type MemberDuesRecord
+  type MemberDuesRecord,
+  type MemberDuesSettings
 } from "./memberDues.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
 import type {
@@ -252,7 +253,7 @@ export function organizationsPage(
   });
 }
 
-export function memberDuesPage(appName: string, context: AuthContext, members: MemberDuesRecord[]): Response {
+export function memberDuesPage(appName: string, context: AuthContext, members: MemberDuesRecord[], settings: MemberDuesSettings): Response {
   const paidCount = members.reduce((sum, member) => sum + member.q1_paid + member.q2_paid + member.q3_paid + member.q4_paid, 0);
   const openCount = members.length * 4 - paidCount;
   return layout({
@@ -271,9 +272,29 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
       </section>
       <section class="content-band dues-toolbar">
         <div>
-          <h2>M&M Rotary Club - Fiscal Year 2026-2027</h2>
+          <h2>M&M Rotary Club - Fiscal Year ${escapeHtml(settings.fiscal_year)}</h2>
           <p class="muted">Click a member name to prepare an invoice PDF and email draft.</p>
         </div>
+        <form method="post" action="/member-dues/settings" class="dues-settings-form">
+          <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+          <label>Fiscal year
+            <select name="fiscalYear">
+              ${fiscalYearOptions(settings.fiscal_year)}
+            </select>
+          </label>
+          <label>Quarterly dues
+            <input name="quarterlyDues" inputmode="decimal" value="${centsInputValue(settings.quarterly_dues_cents)}">
+          </label>
+          <label>Meal amount
+            <input name="mealAmount" inputmode="decimal" value="${centsInputValue(settings.meal_cents)}">
+          </label>
+          <label>Meeting day
+            <select name="meetingDay">
+              ${meetingDayOptions(settings.meeting_day)}
+            </select>
+          </label>
+          <button type="submit">Save settings</button>
+        </form>
       </section>
       <div class="table-wrap dues-sheet">
         <table>
@@ -300,8 +321,8 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
   });
 }
 
-export function memberDuesDetailPage(appName: string, context: AuthContext, member: MemberDuesRecord): Response {
-  const invoice = memberDuesInvoice(member);
+export function memberDuesDetailPage(appName: string, context: AuthContext, member: MemberDuesRecord, settings: MemberDuesSettings): Response {
+  const invoice = memberDuesInvoice(member, settings);
   return layout({
     title: "Member dues invoice",
     appName,
@@ -319,6 +340,9 @@ export function memberDuesDetailPage(appName: string, context: AuthContext, memb
             <dt>Address</dt><dd>${escapeHtml(member.address).replaceAll("\n", "<br>") || "No address on file"}</dd>
             <dt>Dues frequency</dt><dd>${escapeHtml(frequencyLabel(member.dues_frequency))}</dd>
             <dt>Invoice includes</dt><dd>${escapeHtml(invoiceIncludedLabel(member.invoice_included) || "Not selected")}</dd>
+            <dt>Fiscal year</dt><dd>${escapeHtml(settings.fiscal_year)}</dd>
+            <dt>Dues rate</dt><dd>${formatMoney(settings.quarterly_dues_cents)} per quarter</dd>
+            <dt>Meals</dt><dd>${formatMoney(settings.meal_cents)} per ${escapeHtml(settings.meeting_day)} meeting</dd>
           </dl>
         </div>
         <div class="content-band">
@@ -1480,6 +1504,18 @@ function monthOptions(): string {
     .join("");
 }
 
+function fiscalYearOptions(current: string): string {
+  return ["2025-2026", "2026-2027", "2027-2028", "2028-2029"]
+    .map((year) => `<option value="${year}"${selected(current, year)}>${year}</option>`)
+    .join("");
+}
+
+function meetingDayOptions(current: string): string {
+  return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    .map((day) => `<option value="${day}"${selected(current, day)}>${day}</option>`)
+    .join("");
+}
+
 function accountOptions(accounts: ChartAccount[], emptyText: string, selectedAccountId = ""): string {
   if (accounts.length === 0) {
     return `<option value="">${escapeHtml(emptyText)}</option>`;
@@ -1582,15 +1618,15 @@ function memberDuesRow(member: MemberDuesRecord, csrfToken: string): string {
   const formId = `dues-${member.id}`;
   return `<tr>
     <td class="dues-member-name">
-      <a href="/member-dues/member?id=${encodeURIComponent(member.id)}">${escapeHtml(member.member_name).replaceAll("\n", "<br>")}</a>
-    </td>
-    <td>
       <form id="${escapeHtml(formId)}" method="post" action="/member-dues/update">
         <input type="hidden" name="csrfToken" value="${escapeHtml(csrfToken)}">
         <input type="hidden" name="id" value="${escapeHtml(member.id)}">
-        <input name="memberName" value="${escapeHtml(member.member_name)}" aria-label="Member name for ${escapeHtml(member.member_name)}">
+        <input type="hidden" name="memberName" value="${escapeHtml(member.member_name)}">
       </form>
-      <input form="${escapeHtml(formId)}" name="email" type="email" value="${escapeHtml(member.email)}" aria-label="Email for ${escapeHtml(member.member_name)}">
+      <a href="/member-dues/member?id=${encodeURIComponent(member.id)}">${escapeHtml(member.member_name).replaceAll("\n", "<br>")}</a>
+    </td>
+    <td>
+      <input class="dues-email-input" form="${escapeHtml(formId)}" name="email" type="email" value="${escapeHtml(member.email)}" aria-label="Email for ${escapeHtml(member.member_name)}">
     </td>
     <td><textarea form="${escapeHtml(formId)}" name="address" rows="2" aria-label="Address for ${escapeHtml(member.member_name)}">${escapeHtml(member.address)}</textarea></td>
     <td>
@@ -1613,7 +1649,7 @@ function memberDuesRow(member: MemberDuesRecord, csrfToken: string): string {
     <td class="dues-check"><input form="${escapeHtml(formId)}" name="q3Paid" type="checkbox"${checked(member.q3_paid)} aria-label="Q3 paid for ${escapeHtml(member.member_name)}"></td>
     <td class="dues-check"><input form="${escapeHtml(formId)}" name="q4Paid" type="checkbox"${checked(member.q4_paid)} aria-label="Q4 paid for ${escapeHtml(member.member_name)}"></td>
     <td><textarea form="${escapeHtml(formId)}" name="notes" rows="2" aria-label="Notes for ${escapeHtml(member.member_name)}">${escapeHtml(member.notes)}</textarea></td>
-    <td><button form="${escapeHtml(formId)}" class="small-button" type="submit">Save</button></td>
+    <td class="dues-save"><button form="${escapeHtml(formId)}" class="small-button" type="submit">Save</button></td>
   </tr>`;
 }
 
