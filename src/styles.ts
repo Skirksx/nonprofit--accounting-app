@@ -551,7 +551,8 @@ h2 {
 }
 
 .dues-sheet {
-  width: min(1760px, calc(100vw - 2rem));
+  width: calc(100vw - 0.75rem);
+  max-width: none;
   margin-left: 50%;
   transform: translateX(-50%);
   box-shadow: var(--shadow);
@@ -560,7 +561,7 @@ h2 {
 }
 
 .dues-sheet table {
-  min-width: 1660px;
+  min-width: 2240px;
   table-layout: fixed;
   font-size: 0.9rem;
 }
@@ -583,24 +584,24 @@ h2 {
 
 .dues-sheet th:nth-child(1),
 .dues-sheet td:nth-child(1) {
-  width: 190px;
+  width: 230px;
 }
 
 .dues-sheet th:nth-child(2),
 .dues-sheet td:nth-child(2) {
-  width: 315px;
+  width: 400px;
 }
 
 .dues-sheet th:nth-child(3),
 .dues-sheet td:nth-child(3) {
-  width: 250px;
+  width: 340px;
 }
 
 .dues-sheet th:nth-child(4),
 .dues-sheet td:nth-child(4),
 .dues-sheet th:nth-child(5),
 .dues-sheet td:nth-child(5) {
-  width: 150px;
+  width: 190px;
 }
 
 .dues-sheet th:nth-child(6),
@@ -611,17 +612,17 @@ h2 {
 .dues-sheet td:nth-child(8),
 .dues-sheet th:nth-child(9),
 .dues-sheet td:nth-child(9) {
-  width: 88px;
+  width: 112px;
 }
 
 .dues-sheet th:nth-child(10),
 .dues-sheet td:nth-child(10) {
-  width: 360px;
+  width: 500px;
 }
 
 .dues-sheet th:nth-child(11),
 .dues-sheet td:nth-child(11) {
-  width: 92px;
+  width: 120px;
 }
 
 .dues-sheet input,
