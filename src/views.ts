@@ -1747,6 +1747,7 @@ function statementOfActivitiesPdfUrl(report: StatementOfActivitiesReport): strin
   if (report.filters.startDate) params.set("startDate", report.filters.startDate);
   if (report.filters.endDate) params.set("endDate", report.filters.endDate);
   if (report.filters.fundId) params.set("fundId", report.filters.fundId);
+  params.set("pdf", "detail-v2");
   const query = params.toString();
   return `/reports/statement-of-activities.pdf${query ? `?${query}` : ""}`;
 }
