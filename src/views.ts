@@ -73,6 +73,7 @@ export function layout(options: {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>${escapeHtml(options.title)} | ${escapeHtml(options.appName)}</title>
         <link rel="stylesheet" href="/assets/styles.css?v=member-dues-wide-2">
+        <script src="/assets/app.js?v=member-dues-widths-3" defer></script>
       </head>
       <body>
         <header class="topbar">
@@ -339,8 +340,7 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
             ${members.map((member) => memberDuesRow(member, context.csrfToken)).join("")}
           </tbody>
         </table>
-      </div>
-      ${memberDuesColumnWidthScript()}`
+      </div>`
   });
 }
 
@@ -1475,7 +1475,7 @@ export function html(body: string, init?: ResponseInit): Response {
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "same-origin");
-  headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 
   return new Response(body, {
     ...init,
@@ -1696,79 +1696,6 @@ function memberDuesColumnControls(): string {
       <input type="number" min="70" max="900" step="10" value="${width}" data-width-control data-width-property="${property}">
     </label>`)
     .join("");
-}
-
-function memberDuesColumnWidthScript(): string {
-  return `<script>
-(() => {
-  const sheet = document.querySelector("[data-dues-sheet]");
-  if (!sheet) return;
-  const table = sheet.querySelector("table");
-  const columns = Array.from(sheet.querySelectorAll("col"));
-  const storageKey = sheet.getAttribute("data-width-storage-key") || "member-dues-widths";
-  const controls = Array.from(document.querySelectorAll("[data-width-control]"));
-  const defaults = Object.fromEntries(controls.map((control) => [control.dataset.widthProperty, Number(control.value)]));
-
-  function columnForProperty(property) {
-    return columns.find((column) => (column.getAttribute("style") || "").includes(property));
-  }
-
-  function readWidths() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
-      return { ...defaults, ...saved };
-    } catch {
-      return { ...defaults };
-    }
-  }
-
-  function applyWidths(widths) {
-    let total = 0;
-    for (const control of controls) {
-      const property = control.dataset.widthProperty;
-      const width = Math.max(70, Math.min(900, Number(widths[property]) || Number(control.value)));
-      control.value = String(width);
-      sheet.style.setProperty(property, width + "px");
-      const column = columnForProperty(property);
-      if (column) column.style.width = width + "px";
-      total += width;
-    }
-    sheet.style.setProperty("--dues-table-width", total + "px");
-    if (table) {
-      table.style.width = total + "px";
-      table.style.minWidth = total + "px";
-    }
-    localStorage.setItem(storageKey, JSON.stringify(widths));
-  }
-
-  function saveControlWidth(control) {
-    const property = control.dataset.widthProperty;
-    if (!property) return;
-    const widths = readWidths();
-    widths[property] = Number(control.value);
-    applyWidths(widths);
-  }
-
-  controls.forEach((control) => {
-    control.addEventListener("input", () => {
-      saveControlWidth(control);
-    });
-    control.addEventListener("change", () => {
-      saveControlWidth(control);
-    });
-  });
-
-  const reset = document.querySelector("[data-dues-reset-widths]");
-  if (reset) {
-    reset.addEventListener("click", () => {
-      localStorage.removeItem(storageKey);
-      applyWidths({ ...defaults });
-    });
-  }
-
-  applyWidths(readWidths());
-})();
-</script>`;
 }
 
 function payrollEmployeeOptions(employees: PayrollEmployee[]): string {
