@@ -298,6 +298,19 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
       </section>
       <div class="table-wrap dues-sheet">
         <table>
+          <colgroup>
+            <col class="dues-col-member">
+            <col class="dues-col-email">
+            <col class="dues-col-address">
+            <col class="dues-col-frequency">
+            <col class="dues-col-included">
+            <col class="dues-col-quarter">
+            <col class="dues-col-quarter">
+            <col class="dues-col-quarter">
+            <col class="dues-col-quarter">
+            <col class="dues-col-notes">
+            <col class="dues-col-save">
+          </colgroup>
           <thead>
             <tr>
               <th>Member Name</th>
