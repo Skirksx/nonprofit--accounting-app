@@ -561,7 +561,8 @@ h2 {
 }
 
 .dues-sheet table {
-  min-width: 2240px;
+  width: 2590px;
+  min-width: 2590px;
   table-layout: fixed;
   font-size: 0.9rem;
 }
@@ -582,52 +583,19 @@ h2 {
   vertical-align: middle;
 }
 
-.dues-sheet th:nth-child(1),
-.dues-sheet td:nth-child(1) {
-  width: 230px;
-}
-
-.dues-sheet th:nth-child(2),
-.dues-sheet td:nth-child(2) {
-  width: 400px;
-}
-
-.dues-sheet th:nth-child(3),
-.dues-sheet td:nth-child(3) {
-  width: 340px;
-}
-
-.dues-sheet th:nth-child(4),
-.dues-sheet td:nth-child(4),
-.dues-sheet th:nth-child(5),
-.dues-sheet td:nth-child(5) {
-  width: 190px;
-}
-
-.dues-sheet th:nth-child(6),
-.dues-sheet td:nth-child(6),
-.dues-sheet th:nth-child(7),
-.dues-sheet td:nth-child(7),
-.dues-sheet th:nth-child(8),
-.dues-sheet td:nth-child(8),
-.dues-sheet th:nth-child(9),
-.dues-sheet td:nth-child(9) {
-  width: 112px;
-}
-
-.dues-sheet th:nth-child(10),
-.dues-sheet td:nth-child(10) {
-  width: 500px;
-}
-
-.dues-sheet th:nth-child(11),
-.dues-sheet td:nth-child(11) {
-  width: 120px;
-}
+.dues-col-member { width: 250px; }
+.dues-col-email { width: 520px; }
+.dues-col-address { width: 380px; }
+.dues-col-frequency { width: 210px; }
+.dues-col-included { width: 220px; }
+.dues-col-quarter { width: 105px; }
+.dues-col-notes { width: 560px; }
+.dues-col-save { width: 130px; }
 
 .dues-sheet input,
 .dues-sheet select,
 .dues-sheet textarea {
+  width: 100%;
   min-height: 2rem;
   border: 1px solid transparent;
   border-radius: 4px;
