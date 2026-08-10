@@ -72,7 +72,7 @@ export function layout(options: {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>${escapeHtml(options.title)} | ${escapeHtml(options.appName)}</title>
-        <link rel="stylesheet" href="/assets/styles.css">
+        <link rel="stylesheet" href="/assets/styles.css?v=member-dues-wide-2">
       </head>
       <body>
         <header class="topbar">
@@ -297,19 +297,19 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
         </form>
       </section>
       <div class="table-wrap dues-sheet">
-        <table>
+        <table style="width: 2590px; min-width: 2590px;">
           <colgroup>
-            <col class="dues-col-member">
-            <col class="dues-col-email">
-            <col class="dues-col-address">
-            <col class="dues-col-frequency">
-            <col class="dues-col-included">
-            <col class="dues-col-quarter">
-            <col class="dues-col-quarter">
-            <col class="dues-col-quarter">
-            <col class="dues-col-quarter">
-            <col class="dues-col-notes">
-            <col class="dues-col-save">
+            <col class="dues-col-member" style="width: 250px;">
+            <col class="dues-col-email" style="width: 520px;">
+            <col class="dues-col-address" style="width: 380px;">
+            <col class="dues-col-frequency" style="width: 210px;">
+            <col class="dues-col-included" style="width: 220px;">
+            <col class="dues-col-quarter" style="width: 105px;">
+            <col class="dues-col-quarter" style="width: 105px;">
+            <col class="dues-col-quarter" style="width: 105px;">
+            <col class="dues-col-quarter" style="width: 105px;">
+            <col class="dues-col-notes" style="width: 560px;">
+            <col class="dues-col-save" style="width: 130px;">
           </colgroup>
           <thead>
             <tr>
