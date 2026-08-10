@@ -10,7 +10,7 @@ import {
   validateCsrf
 } from "./auth.ts";
 import { hashPassword, randomId } from "./crypto.ts";
-import { getAccountRegister, getAccountRegisterCsv } from "./accountRegisterReport.ts";
+import { getAccountRegister, getAccountRegisterCsv, postAccountRegisterAdjustment } from "./accountRegisterReport.ts";
 import {
   createDraftJournalEntry,
   deleteJournalEntry,
@@ -170,6 +170,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
   { method: "GET", path: "/reports/account-register", handler: getAccountRegister },
   { method: "GET", path: "/reports/account-register.csv", handler: getAccountRegisterCsv },
+  { method: "POST", path: "/reports/account-register/adjust", handler: postAccountRegisterAdjustment },
   { method: "GET", path: "/reports/income-statement", handler: getIncomeStatement },
   { method: "GET", path: "/reports/income-statement.pdf", handler: getIncomeStatementPdf },
   { method: "GET", path: "/reports/budget-vs-actual", handler: getBudgetVsActual },
