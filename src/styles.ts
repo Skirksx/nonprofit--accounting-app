@@ -550,6 +550,35 @@ h2 {
   min-height: 2.4rem;
 }
 
+.dues-column-panel {
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+}
+
+.dues-column-panel summary {
+  color: var(--accent-strong);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.dues-column-controls {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(100px, 1fr)) auto;
+  gap: 0.75rem;
+  align-items: end;
+  margin-top: 0.85rem;
+}
+
+.dues-column-controls label {
+  gap: 0.25rem;
+  font-size: 0.78rem;
+}
+
+.dues-column-controls input {
+  min-height: 2.15rem;
+  padding: 0.35rem 0.45rem;
+}
+
 .dues-sheet {
   width: calc(100vw - 0.75rem);
   max-width: none;
@@ -719,6 +748,9 @@ h2 {
   .line-set,
   .settings-grid,
   .split,
+  .dues-toolbar,
+  .dues-settings-form,
+  .dues-column-controls,
   .employee-edit-grid {
     grid-template-columns: 1fr;
   }
