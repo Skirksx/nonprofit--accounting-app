@@ -73,7 +73,7 @@ export function layout(options: {
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>${escapeHtml(options.title)} | ${escapeHtml(options.appName)}</title>
         <link rel="stylesheet" href="/assets/styles.css?v=member-dues-wide-2">
-        <script src="/assets/app.js?v=member-dues-widths-3" defer></script>
+        <script src="/assets/app.js?v=member-dues-widths-4" defer></script>
       </head>
       <body>
         <header class="topbar">
@@ -1692,8 +1692,8 @@ function memberDuesColumnControls(): string {
   ] as const;
 
   return controls
-    .map(([label, property, width]) => `<label>${escapeHtml(label)}
-      <input type="number" min="70" max="900" step="10" value="${width}" data-width-control data-width-property="${property}">
+    .map(([label, property, width], index) => `<label>${escapeHtml(label)}
+      <input type="number" min="70" max="900" step="10" value="${width}" data-width-control data-width-property="${property}" data-width-column="${index}">
     </label>`)
     .join("");
 }
