@@ -11,8 +11,9 @@ export const clientScripts = `
   const storageKey = sheet.getAttribute("data-width-storage-key") || "member-dues-widths";
   const defaults = Object.fromEntries(controls.map((control) => [control.dataset.widthProperty, Number(control.value)]));
 
-  function columnForProperty(property) {
-    return columns.find((column) => (column.getAttribute("style") || "").includes(property));
+  function columnForControl(control) {
+    const index = Number(control.dataset.widthColumn);
+    return Number.isInteger(index) ? columns[index] : undefined;
   }
 
   function readWidths() {
@@ -32,7 +33,7 @@ export const clientScripts = `
       const width = Math.max(70, Math.min(900, Number(widths[property]) || Number(control.value)));
       control.value = String(width);
       sheet.style.setProperty(property, width + "px");
-      const column = columnForProperty(property);
+      const column = columnForControl(control);
       if (column) column.style.width = width + "px";
       total += width;
     }
