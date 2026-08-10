@@ -89,6 +89,7 @@ import {
   validateProfileName
 } from "./settings.ts";
 import { styles } from "./styles.ts";
+import { clientScripts } from "./clientScripts.ts";
 import { createAndPostSimpleTransaction, validateSimpleTransactionForm } from "./transactions.ts";
 import type { Env, RouteHandler } from "./types.ts";
 import { validateAccount, validateLogin, validateOrganizationWorkspace, validateSetup } from "./validation.ts";
@@ -177,7 +178,8 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/reports/statement-of-activities.pdf", handler: getStatementOfActivitiesPdf },
   { method: "GET", path: "/transactions/new", handler: getNewTransaction },
   { method: "POST", path: "/transactions", handler: postTransaction },
-  { method: "GET", path: "/assets/styles.css", handler: getStyles }
+  { method: "GET", path: "/assets/styles.css", handler: getStyles },
+  { method: "GET", path: "/assets/app.js", handler: getClientScripts }
 ];
 
 export default {
@@ -1252,6 +1254,16 @@ function getStyles(): Response {
   return new Response(styles, {
     headers: {
       "Content-Type": "text/css; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
+}
+
+function getClientScripts(): Response {
+  return new Response(clientScripts, {
+    headers: {
+      "Content-Type": "text/javascript; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff"
     }
