@@ -1,5 +1,6 @@
 import { listAccounts, type ChartAccount } from "./accounts.ts";
-import { redirect, requireAuth } from "./auth.ts";
+import { redirect, requireAuth, requireRole, validateCsrf } from "./auth.ts";
+import { createDraftJournalEntry, postJournalEntry } from "./journalEntries.ts";
 import { layout } from "./views.ts";
 import type { AccountType, AuthContext, Env } from "./types.ts";
 
@@ -53,6 +54,29 @@ export async function getAccountRegister(request: Request, env: Env): Promise<Re
   return accountRegisterPage(env.APP_NAME, context, accounts, report);
 }
 
+export async function postAccountRegisterAdjustment(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const accounts = await moneyAccounts(env, context.organization.id);
+  const result = await validateBankBalanceAdjustment(form, env, context.organization.id, context.user.id);
+  if (!result.ok) return accountRegisterPage(env.APP_NAME, context, accounts, null, result.errors);
+
+  await createBankBalanceAdjustment(env, result.data);
+  const params = new URLSearchParams({
+    accountId: result.data.accountId,
+    endDate: result.data.adjustmentDate
+  });
+  return redirect(`/reports/account-register?${params.toString()}`);
+}
+
 export async function getAccountRegisterCsv(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
@@ -76,6 +100,99 @@ async function moneyAccounts(env: Env, organizationId: string): Promise<ChartAcc
   return (await listAccounts(env, organizationId)).filter(
     (account) => account.status === "active" && ["asset", "liability"].includes(account.account_type)
   );
+}
+
+type BankBalanceAdjustmentInput = {
+  organizationId: string;
+  createdByUserId: string;
+  accountId: string;
+  offsetAccountId: string;
+  adjustmentDate: string;
+  targetBalanceCents: number;
+  currentBalanceCents: number;
+  description: string;
+};
+
+async function validateBankBalanceAdjustment(
+  form: FormData,
+  env: Env,
+  organizationId: string,
+  createdByUserId: string
+): Promise<
+  | { ok: true; data: BankBalanceAdjustmentInput }
+  | { ok: false; errors: Record<string, string> }
+> {
+  const accountId = stringValue(form, "accountId");
+  const adjustmentDate = stringValue(form, "adjustmentDate");
+  const targetBalanceCents = dollarsToCents(stringValue(form, "targetBalance"));
+  const description = stringValue(form, "description") || "Bank balance adjustment";
+  const accounts = await listAccounts(env, organizationId);
+  const account = accounts.find((item) => item.id === accountId);
+  const offsetAccount = accounts.find((item) => item.status === "active" && item.account_type === "net_asset");
+  const errors: Record<string, string> = {};
+
+  if (!account || account.organization_id !== organizationId || account.status !== "active" || account.account_type !== "asset") {
+    errors.accountId = "Choose an active bank or investment asset account.";
+  }
+  if (!offsetAccount) {
+    errors.offsetAccount = "Add an active net asset account before posting a bank balance adjustment.";
+  }
+  if (!isIsoDate(adjustmentDate)) {
+    errors.adjustmentDate = "Adjustment date must use YYYY-MM-DD.";
+  }
+  if (!Number.isInteger(targetBalanceCents) || targetBalanceCents < 0) {
+    errors.targetBalance = "Correct balance must be zero or greater.";
+  }
+  if (description.length < 2) {
+    errors.description = "Description is required.";
+  }
+
+  if (Object.keys(errors).length > 0 || !account || !offsetAccount) return { ok: false, errors };
+
+  const register = await accountRegister(env, {
+    organizationId,
+    accountId,
+    endDate: adjustmentDate
+  });
+  const currentBalanceCents = register?.endingBalanceCents ?? 0;
+
+  return {
+    ok: true,
+    data: {
+      organizationId,
+      createdByUserId,
+      accountId,
+      offsetAccountId: offsetAccount.id,
+      adjustmentDate,
+      targetBalanceCents,
+      currentBalanceCents,
+      description
+    }
+  };
+}
+
+async function createBankBalanceAdjustment(env: Env, input: BankBalanceAdjustmentInput): Promise<string | null> {
+  const differenceCents = input.targetBalanceCents - input.currentBalanceCents;
+  if (differenceCents === 0) return null;
+
+  const amountCents = Math.abs(differenceCents);
+  const bankLine = differenceCents > 0
+    ? journalLine(input.accountId, input.description, amountCents, 0)
+    : journalLine(input.accountId, input.description, 0, amountCents);
+  const offsetLine = differenceCents > 0
+    ? journalLine(input.offsetAccountId, input.description, 0, amountCents)
+    : journalLine(input.offsetAccountId, input.description, amountCents, 0);
+
+  const entryId = await createDraftJournalEntry(env, {
+    organizationId: input.organizationId,
+    entryDate: input.adjustmentDate,
+    description: `Bank balance adjustment: ${input.description}`,
+    createdByUserId: input.createdByUserId,
+    lines: [bankLine, offsetLine]
+  });
+
+  await postJournalEntry(env, input.organizationId, entryId);
+  return entryId;
 }
 
 function parseAccountRegisterFilters(
@@ -196,6 +313,8 @@ function accountRegisterPage(
   report: AccountRegisterReport | null,
   errors: Record<string, string> = {}
 ): Response {
+  const selectedAccountId = report?.filters.accountId ?? "";
+  const selectedDate = report?.filters.endDate ?? new Date().toISOString().slice(0, 10);
   return layout({
     title: "Account Register",
     appName,
@@ -218,8 +337,44 @@ function accountRegisterPage(
           <button type="submit">Run report</button>
         </div>
       </form>
+      ${bankBalanceAdjustmentForm(context, accounts, selectedAccountId, selectedDate, errors)}
       ${report ? accountRegisterSummary(report) : ""}`
   });
+}
+
+function bankBalanceAdjustmentForm(
+  context: AuthContext,
+  accounts: ChartAccount[],
+  selectedAccountId: string,
+  selectedDate: string,
+  errors: Record<string, string>
+): string {
+  const assetAccounts = accounts.filter((account) => account.account_type === "asset");
+  return `<form method="post" action="/reports/account-register/adjust" class="grid-form report-filter">
+    <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+    <h2>Adjust bank balance</h2>
+    <p class="muted">Set the correct statement balance for a bank or investment account. The app posts only the difference as a balanced adjustment.</p>
+    ${errors.offsetAccount ? `<p class="alert">${escapeHtml(errors.offsetAccount)}</p>` : ""}
+    <label>Bank account
+      <select name="accountId">${accountOptions(assetAccounts, selectedAccountId)}</select>
+      ${errorText(errors.accountId)}
+    </label>
+    <label>Adjustment date
+      <input name="adjustmentDate" type="date" value="${escapeHtml(selectedDate)}" required>
+      ${errorText(errors.adjustmentDate)}
+    </label>
+    <label>Correct bank balance
+      <input name="targetBalance" inputmode="decimal" placeholder="0.00" required>
+      ${errorText(errors.targetBalance)}
+    </label>
+    <label>Description
+      <input name="description" type="text" value="Bank statement balance adjustment" required>
+      ${errorText(errors.description)}
+    </label>
+    <div class="form-actions">
+      <button type="submit">Post adjustment</button>
+    </div>
+  </form>`;
 }
 
 function accountRegisterSummary(report: AccountRegisterReport): string {
@@ -318,6 +473,26 @@ function accountRegisterCsvUrl(report: AccountRegisterReport): string {
 
 function normalBalanceChange(accountType: AccountType, debitCents: number, creditCents: number): number {
   return accountType === "asset" || accountType === "expense" ? debitCents - creditCents : creditCents - debitCents;
+}
+
+function journalLine(accountId: string, description: string, debitAmountCents: number, creditAmountCents: number) {
+  return {
+    accountId,
+    description,
+    debitAmountCents,
+    creditAmountCents
+  };
+}
+
+function dollarsToCents(value: string): number {
+  if (!/^\d+(\.\d{1,2})?$/.test(value)) return Number.NaN;
+  const [dollars, cents = ""] = value.split(".");
+  return Number(dollars) * 100 + Number(cents.padEnd(2, "0"));
+}
+
+function stringValue(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value.trim() : "";
 }
 
 function formatMoney(amountCents: number): string {
