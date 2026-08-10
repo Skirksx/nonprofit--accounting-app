@@ -296,20 +296,29 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
           <button type="submit">Save settings</button>
         </form>
       </section>
-      <div class="table-wrap dues-sheet">
-        <table style="width: 2590px; min-width: 2590px;">
+      <section class="content-band dues-column-panel">
+        <details>
+          <summary>Column widths</summary>
+          <div class="dues-column-controls">
+            ${memberDuesColumnControls()}
+            <button class="small-button" type="button" data-dues-reset-widths>Reset widths</button>
+          </div>
+        </details>
+      </section>
+      <div class="table-wrap dues-sheet" data-dues-sheet data-width-storage-key="member-dues-widths-${escapeHtml(settings.fiscal_year)}">
+        <table style="width: var(--dues-table-width, 2590px); min-width: var(--dues-table-width, 2590px);">
           <colgroup>
-            <col class="dues-col-member" style="width: 250px;">
-            <col class="dues-col-email" style="width: 520px;">
-            <col class="dues-col-address" style="width: 380px;">
-            <col class="dues-col-frequency" style="width: 210px;">
-            <col class="dues-col-included" style="width: 220px;">
-            <col class="dues-col-quarter" style="width: 105px;">
-            <col class="dues-col-quarter" style="width: 105px;">
-            <col class="dues-col-quarter" style="width: 105px;">
-            <col class="dues-col-quarter" style="width: 105px;">
-            <col class="dues-col-notes" style="width: 560px;">
-            <col class="dues-col-save" style="width: 130px;">
+            <col class="dues-col-member" style="width: var(--dues-col-member-width, 250px);">
+            <col class="dues-col-email" style="width: var(--dues-col-email-width, 520px);">
+            <col class="dues-col-address" style="width: var(--dues-col-address-width, 380px);">
+            <col class="dues-col-frequency" style="width: var(--dues-col-frequency-width, 210px);">
+            <col class="dues-col-included" style="width: var(--dues-col-included-width, 220px);">
+            <col class="dues-col-quarter" style="width: var(--dues-col-q1-width, 105px);">
+            <col class="dues-col-quarter" style="width: var(--dues-col-q2-width, 105px);">
+            <col class="dues-col-quarter" style="width: var(--dues-col-q3-width, 105px);">
+            <col class="dues-col-quarter" style="width: var(--dues-col-q4-width, 105px);">
+            <col class="dues-col-notes" style="width: var(--dues-col-notes-width, 560px);">
+            <col class="dues-col-save" style="width: var(--dues-col-save-width, 130px);">
           </colgroup>
           <thead>
             <tr>
@@ -330,7 +339,8 @@ export function memberDuesPage(appName: string, context: AuthContext, members: M
             ${members.map((member) => memberDuesRow(member, context.csrfToken)).join("")}
           </tbody>
         </table>
-      </div>`
+      </div>
+      ${memberDuesColumnWidthScript()}`
   });
 }
 
@@ -1664,6 +1674,80 @@ function memberDuesRow(member: MemberDuesRecord, csrfToken: string): string {
     <td><textarea form="${escapeHtml(formId)}" name="notes" rows="2" aria-label="Notes for ${escapeHtml(member.member_name)}">${escapeHtml(member.notes)}</textarea></td>
     <td class="dues-save"><button form="${escapeHtml(formId)}" class="small-button" type="submit">Save</button></td>
   </tr>`;
+}
+
+function memberDuesColumnControls(): string {
+  const controls = [
+    ["Member", "--dues-col-member-width", 250],
+    ["Email", "--dues-col-email-width", 520],
+    ["Address", "--dues-col-address-width", 380],
+    ["Frequency", "--dues-col-frequency-width", 210],
+    ["Invoice type", "--dues-col-included-width", 220],
+    ["Q1", "--dues-col-q1-width", 105],
+    ["Q2", "--dues-col-q2-width", 105],
+    ["Q3", "--dues-col-q3-width", 105],
+    ["Q4", "--dues-col-q4-width", 105],
+    ["Notes", "--dues-col-notes-width", 560],
+    ["Save", "--dues-col-save-width", 130]
+  ] as const;
+
+  return controls
+    .map(([label, property, width]) => `<label>${escapeHtml(label)}
+      <input type="number" min="70" max="900" step="10" value="${width}" data-width-control data-width-property="${property}">
+    </label>`)
+    .join("");
+}
+
+function memberDuesColumnWidthScript(): string {
+  return `<script>
+(() => {
+  const sheet = document.querySelector("[data-dues-sheet]");
+  if (!sheet) return;
+  const storageKey = sheet.getAttribute("data-width-storage-key") || "member-dues-widths";
+  const controls = Array.from(document.querySelectorAll("[data-width-control]"));
+  const defaults = Object.fromEntries(controls.map((control) => [control.dataset.widthProperty, Number(control.value)]));
+
+  function readWidths() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      return { ...defaults, ...saved };
+    } catch {
+      return { ...defaults };
+    }
+  }
+
+  function applyWidths(widths) {
+    let total = 0;
+    for (const control of controls) {
+      const property = control.dataset.widthProperty;
+      const width = Math.max(70, Math.min(900, Number(widths[property]) || Number(control.value)));
+      control.value = String(width);
+      sheet.style.setProperty(property, width + "px");
+      total += width;
+    }
+    sheet.style.setProperty("--dues-table-width", total + "px");
+    localStorage.setItem(storageKey, JSON.stringify(widths));
+  }
+
+  controls.forEach((control) => {
+    control.addEventListener("input", () => {
+      const widths = readWidths();
+      widths[control.dataset.widthProperty] = Number(control.value);
+      applyWidths(widths);
+    });
+  });
+
+  const reset = document.querySelector("[data-dues-reset-widths]");
+  if (reset) {
+    reset.addEventListener("click", () => {
+      localStorage.removeItem(storageKey);
+      applyWidths({ ...defaults });
+    });
+  }
+
+  applyWidths(readWidths());
+})();
+</script>`;
 }
 
 function payrollEmployeeOptions(employees: PayrollEmployee[]): string {
