@@ -69,7 +69,17 @@ test("lists accounts by organization with explicit account fields", async () => 
   assert.equal(accounts.length, 1);
   assert.equal(accounts[0].organization_id, "org_1");
   assert.equal(accounts[0].account_number, "1000");
+  assert.match(env.calls[0].sql, /WHERE organization_id = \? AND status = \?/);
+  assert.deepEqual(env.calls[0].bindings, ["org_1", "active"]);
+});
+
+test("can list all accounts across active and inactive statuses", async () => {
+  const env = mockEnv();
+
+  await listAccounts(env, "org_1", "all");
+
   assert.match(env.calls[0].sql, /WHERE organization_id = \?/);
+  assert.doesNotMatch(env.calls[0].sql, /status = \?/);
   assert.deepEqual(env.calls[0].bindings, ["org_1"]);
 });
 

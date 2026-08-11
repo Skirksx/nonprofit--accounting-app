@@ -1,4 +1,4 @@
-import { accountStats, createAccount, listAccounts } from "./accounts.ts";
+import { accountStats, createAccount, listAccounts, updateAccountStatus, type AccountStatusFilter } from "./accounts.ts";
 import {
   attemptLogin,
   createOrganizationUser,
@@ -133,6 +133,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/organizations/switch", handler: postOrganizationSwitch },
   { method: "GET", path: "/accounts", handler: getAccounts },
   { method: "POST", path: "/accounts", handler: postAccounts },
+  { method: "POST", path: "/accounts/status", handler: postAccountStatus },
   { method: "GET", path: "/funds", handler: getFunds },
   { method: "POST", path: "/funds", handler: postFunds },
   { method: "POST", path: "/funds/update", handler: postFundUpdate },
@@ -421,8 +422,9 @@ async function getAccounts(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  const accounts = await listAccounts(env, context.organization.id);
-  return accountsPage(env.APP_NAME, context, accounts);
+  const statusFilter = parseAccountStatusFilter(new URL(request.url));
+  const accounts = await listAccounts(env, context.organization.id, statusFilter);
+  return accountsPage(env.APP_NAME, context, accounts, {}, statusFilter);
 }
 
 async function postAccounts(request: Request, env: Env): Promise<Response> {
@@ -438,8 +440,8 @@ async function postAccounts(request: Request, env: Env): Promise<Response> {
 
   const result = validateAccount(form);
   if (!result.ok) {
-    const accounts = await listAccounts(env, context.organization.id);
-    return accountsPage(env.APP_NAME, context, accounts, result.errors);
+    const accounts = await listAccounts(env, context.organization.id, "all");
+    return accountsPage(env.APP_NAME, context, accounts, result.errors, "all");
   }
 
   try {
@@ -452,13 +454,34 @@ async function postAccounts(request: Request, env: Env): Promise<Response> {
       status: result.data.status
     });
   } catch (error) {
-    const accounts = await listAccounts(env, context.organization.id);
+    const accounts = await listAccounts(env, context.organization.id, "all");
     return accountsPage(env.APP_NAME, context, accounts, {
       accountNumber: "That account number already exists for this organization."
-    });
+    }, "all");
   }
 
   return redirect("/accounts");
+}
+
+async function postAccountStatus(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "accountant");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const accountId = String(form.get("accountId") ?? "");
+  const status = String(form.get("status") ?? "");
+  const returnStatus = String(form.get("returnStatus") ?? "all");
+  if (accountId && (status === "active" || status === "inactive")) {
+    await updateAccountStatus(env, context.organization.id, accountId, status);
+  }
+
+  return redirect(`/accounts?status=${encodeURIComponent(parseAccountStatusValue(returnStatus))}`);
 }
 
 async function getFunds(request: Request, env: Env): Promise<Response> {
@@ -1358,6 +1381,14 @@ function validateReportDates(startDate: string, endDate: string): Record<string,
 function parseBudgetYear(url: URL): number {
   const value = Number(url.searchParams.get("fiscalYear") ?? new Date().getFullYear());
   return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : new Date().getFullYear();
+}
+
+function parseAccountStatusFilter(url: URL): AccountStatusFilter {
+  return parseAccountStatusValue(url.searchParams.get("status") ?? "active");
+}
+
+function parseAccountStatusValue(value: string): AccountStatusFilter {
+  return value === "inactive" || value === "all" ? value : "active";
 }
 
 function fiscalYearFromForm(form: FormData): number {

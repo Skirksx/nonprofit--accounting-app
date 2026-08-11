@@ -20,7 +20,49 @@ export type NewChartAccount = {
   status: AccountStatus;
 };
 
-export async function listAccounts(env: Env, organizationId: string): Promise<ChartAccount[]> {
+export type AccountStatusFilter = AccountStatus | "all";
+
+export async function listAccounts(
+  env: Env,
+  organizationId: string,
+  statusFilter: AccountStatusFilter = "active"
+): Promise<ChartAccount[]> {
+  const statusClause = statusFilter === "all" ? "" : " AND status = ?";
+  const statement = env.DB.prepare(
+    `SELECT
+      id,
+      organization_id,
+      account_number,
+      account_name,
+      account_type,
+      normal_balance,
+      status
+     FROM accounts
+     WHERE organization_id = ?${statusClause}
+     ORDER BY account_number ASC`
+  );
+
+  const result = statusFilter === "all"
+    ? await statement.bind(organizationId).all<ChartAccount>()
+    : await statement.bind(organizationId, statusFilter).all<ChartAccount>();
+
+  return result.results ?? [];
+}
+
+export async function updateAccountStatus(
+  env: Env,
+  organizationId: string,
+  accountId: string,
+  status: AccountStatus
+): Promise<void> {
+  await env.DB.prepare(
+    "UPDATE accounts SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE organization_id = ? AND id = ?"
+  )
+    .bind(status, organizationId, accountId)
+    .run();
+}
+
+export async function listActiveAccounts(env: Env, organizationId: string): Promise<ChartAccount[]> {
   const result = await env.DB.prepare(
     `SELECT
       id,
@@ -31,7 +73,7 @@ export async function listAccounts(env: Env, organizationId: string): Promise<Ch
       normal_balance,
       status
      FROM accounts
-     WHERE organization_id = ?
+     WHERE organization_id = ? AND status = 'active'
      ORDER BY account_number ASC`
   )
     .bind(organizationId)
