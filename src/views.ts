@@ -1,5 +1,5 @@
 import type { ChartAccount } from "./accounts.ts";
-import type { UserOrganization } from "./auth.ts";
+import type { OrganizationUser, UserOrganization } from "./auth.ts";
 import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
 import {
   frequencyLabel,
@@ -638,8 +638,10 @@ export function payrollPage(
 export function settingsPage(
   appName: string,
   context: AuthContext,
-  errors: Record<string, string> = {}
+  errors: Record<string, string> = {},
+  organizationUsers: OrganizationUser[] = []
 ): Response {
+  const canManageUsers = context.role === "owner" || context.role === "admin";
   return layout({
     title: "Settings",
     appName,
@@ -699,7 +701,65 @@ export function settingsPage(
           <button type="submit">Upload logo</button>
         </form>
       </section>`
+      + (canManageUsers ? organizationUsersPanel(context, organizationUsers, errors) : "")
   });
+}
+
+function organizationUsersPanel(
+  context: AuthContext,
+  organizationUsers: OrganizationUser[],
+  errors: Record<string, string>
+): string {
+  const rows = organizationUsers.length
+    ? organizationUsers
+        .map(
+          (user) => `<tr>
+            <td>${escapeHtml(user.name)}</td>
+            <td>${escapeHtml(user.email)}</td>
+            <td>${formatStatus(user.role)}</td>
+          </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="3" class="empty">No users have been added yet.</td></tr>`;
+
+  return `<section class="content-band settings-users">
+    <div>
+      <p class="eyebrow">Access</p>
+      <h2>Organization users</h2>
+      <p class="muted">Add people who should sign in to ${escapeHtml(context.organization.name)} with their own email and password.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Email / username</th><th>Access level</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <form method="post" action="/settings/users" class="form-card settings-user-form">
+      <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+      <h3>Add user</h3>
+      <label>Name
+        <input name="name" type="text" autocomplete="name" required>
+        ${errorText(errors.userName)}
+      </label>
+      <label>Email / username
+        <input name="email" type="email" autocomplete="email" required>
+        ${errorText(errors.userEmail)}
+      </label>
+      <label>Temporary password
+        <input name="password" type="password" autocomplete="new-password" minlength="12" required>
+        ${errorText(errors.userPassword)}
+      </label>
+      <label>Access level
+        <select name="role">
+          <option value="viewer">Viewer - reports only</option>
+          <option value="accountant">Accountant - transactions and reports</option>
+          <option value="admin">Admin - settings and users</option>
+        </select>
+        ${errorText(errors.userRole)}
+      </label>
+      <button type="submit">Add user</button>
+    </form>
+  </section>`;
 }
 
 export function fundsPage(

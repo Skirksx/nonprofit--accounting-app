@@ -1,5 +1,6 @@
-import { randomId, verifyPassword } from "./crypto.ts";
+import { hashPassword, randomId, verifyPassword } from "./crypto.ts";
 import type { AuthContext, Env, OrganizationProfile, Role, User } from "./types.ts";
+import type { ValidationResult } from "./validation.ts";
 
 const SESSION_COOKIE = "np_session";
 const SESSION_DAYS = 7;
@@ -21,6 +22,21 @@ export type UserOrganization = {
   name: string;
   role: Role;
   organization_profile: OrganizationProfile;
+};
+
+export type OrganizationUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  created_at: string;
+};
+
+type OrganizationUserForm = {
+  name: string;
+  email: string;
+  password: string;
+  role: Exclude<Role, "owner">;
 };
 
 export async function attemptLogin(
@@ -158,6 +174,77 @@ export async function listUserOrganizations(env: Env, userId: string): Promise<U
   return result.results ?? [];
 }
 
+export async function listOrganizationUsers(env: Env, organizationId: string): Promise<OrganizationUser[]> {
+  const result = await env.DB.prepare(
+    `SELECT
+      users.id,
+      users.email,
+      users.name,
+      organization_members.role,
+      organization_members.created_at
+     FROM organization_members
+     JOIN users ON users.id = organization_members.user_id
+     WHERE organization_members.organization_id = ?
+     ORDER BY
+      CASE organization_members.role
+        WHEN 'owner' THEN 1
+        WHEN 'admin' THEN 2
+        WHEN 'accountant' THEN 3
+        ELSE 4
+      END,
+      users.name ASC`
+  )
+    .bind(organizationId)
+    .all<OrganizationUser>();
+
+  return result.results ?? [];
+}
+
+export function validateOrganizationUserForm(form: FormData): ValidationResult<OrganizationUserForm> {
+  const name = stringValue(form, "name");
+  const email = stringValue(form, "email").toLowerCase();
+  const password = stringValue(form, "password");
+  const role = stringValue(form, "role") as Exclude<Role, "owner">;
+  const errors: Record<string, string> = {};
+
+  if (name.length < 2) errors.userName = "Enter the person's name.";
+  if (!isEmail(email)) errors.userEmail = "Enter a valid email address.";
+  if (password.length < 12) errors.userPassword = "Use at least 12 characters.";
+  if (!["admin", "accountant", "viewer"].includes(role)) errors.userRole = "Choose an access level.";
+
+  return Object.keys(errors).length > 0
+    ? { ok: false, errors }
+    : { ok: true, data: { name, email, password, role } };
+}
+
+export async function createOrganizationUser(
+  env: Env,
+  organizationId: string,
+  user: OrganizationUserForm
+): Promise<ValidationResult<null>> {
+  const existingUser = await env.DB.prepare("SELECT id FROM users WHERE email = ?")
+    .bind(user.email)
+    .first<{ id: string }>();
+
+  if (existingUser) {
+    return { ok: false, errors: { userEmail: "A user with this email already exists." } };
+  }
+
+  const password = await hashPassword(user.password);
+  const userId = randomId("usr");
+
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO users (id, email, name, password_hash, password_salt, password_iterations) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(userId, user.email, user.name, password.hash, password.salt, password.iterations),
+    env.DB.prepare(
+      "INSERT INTO organization_members (organization_id, user_id, role) VALUES (?, ?, ?)"
+    ).bind(organizationId, userId, user.role)
+  ]);
+
+  return { ok: true, data: null };
+}
+
 export async function switchOrganization(
   env: Env,
   context: AuthContext,
@@ -233,4 +320,13 @@ function serializeCookie(name: string, value: string, maxAgeSeconds: number, sec
 
 function sqlTimestamp(value: number): string {
   return new Date(value).toISOString().slice(0, 19).replace("T", " ");
+}
+
+function stringValue(form: FormData, key: string): string {
+  const value = form.get(key);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }

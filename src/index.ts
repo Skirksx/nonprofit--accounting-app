@@ -1,13 +1,16 @@
 import { accountStats, createAccount, listAccounts } from "./accounts.ts";
 import {
   attemptLogin,
+  createOrganizationUser,
+  listOrganizationUsers,
   listUserOrganizations,
   logout,
   redirect,
   requireAuth,
   requireRole,
   switchOrganization,
-  validateCsrf
+  validateCsrf,
+  validateOrganizationUserForm
 } from "./auth.ts";
 import { hashPassword, randomId } from "./crypto.ts";
 import { getAccountRegister, getAccountRegisterCsv, postAccountRegisterAdjustment } from "./accountRegisterReport.ts";
@@ -167,6 +170,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/organization-profile", handler: postSettingsOrganizationProfile },
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
+  { method: "POST", path: "/settings/users", handler: postSettingsUsers },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
   { method: "GET", path: "/reports/account-register", handler: getAccountRegister },
   { method: "GET", path: "/reports/account-register.csv", handler: getAccountRegisterCsv },
@@ -1008,7 +1012,7 @@ async function getSettings(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  return settingsPage(env.APP_NAME, context);
+  return settingsPage(env.APP_NAME, context, {}, await settingsUsers(env, context));
 }
 
 async function postSettingsProfile(request: Request, env: Env): Promise<Response> {
@@ -1020,7 +1024,7 @@ async function postSettingsProfile(request: Request, env: Env): Promise<Response
   if (csrfError) return csrfError;
 
   const result = validateProfileName(form);
-  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors, await settingsUsers(env, context));
 
   await updateUserName(env, context.user.id, result.data.name);
   return redirect("/settings");
@@ -1038,7 +1042,7 @@ async function postSettingsOrganizationProfile(request: Request, env: Env): Prom
   if (csrfError) return csrfError;
 
   const result = validateOrganizationProfile(form);
-  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors, await settingsUsers(env, context));
 
   await updateOrganizationProfile(env, context.organization.id, result.data.organizationProfile);
   return redirect("/settings");
@@ -1053,10 +1057,10 @@ async function postSettingsPassword(request: Request, env: Env): Promise<Respons
   if (csrfError) return csrfError;
 
   const result = validatePasswordFields(form);
-  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors, await settingsUsers(env, context));
 
   const update = await updateUserPassword(env, context.user.id, result.data.currentPassword, result.data.newPassword);
-  if (!update.ok) return settingsPage(env.APP_NAME, context, update.errors);
+  if (!update.ok) return settingsPage(env.APP_NAME, context, update.errors, await settingsUsers(env, context));
 
   return redirect("/settings");
 }
@@ -1074,14 +1078,40 @@ async function postSettingsLogo(request: Request, env: Env): Promise<Response> {
 
   const logo = form.get("logo");
   if (!(logo instanceof File)) {
-    return settingsPage(env.APP_NAME, context, { logo: "Choose an image file." });
+    return settingsPage(env.APP_NAME, context, { logo: "Choose an image file." }, await settingsUsers(env, context));
   }
 
   const result = await logoFileToDataUrl(logo);
-  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors, await settingsUsers(env, context));
 
   await updateOrganizationLogo(env, context.organization.id, result.data.logoDataUrl);
   return redirect("/settings");
+}
+
+async function postSettingsUsers(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const result = validateOrganizationUserForm(form);
+  if (!result.ok) return settingsPage(env.APP_NAME, context, result.errors, await settingsUsers(env, context));
+
+  const created = await createOrganizationUser(env, context.organization.id, result.data);
+  if (!created.ok) return settingsPage(env.APP_NAME, context, created.errors, await settingsUsers(env, context));
+
+  return redirect("/settings");
+}
+
+async function settingsUsers(env: Env, context: Awaited<ReturnType<typeof requireAuth>>) {
+  if (context instanceof Response) return [];
+  if (context.role !== "owner" && context.role !== "admin") return [];
+  return listOrganizationUsers(env, context.organization.id);
 }
 
 async function getBalanceSheet(request: Request, env: Env): Promise<Response> {
