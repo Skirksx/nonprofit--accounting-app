@@ -245,6 +245,43 @@ export async function createOrganizationUser(
   return { ok: true, data: null };
 }
 
+export async function removeOrganizationUser(
+  env: Env,
+  organizationId: string,
+  userId: string,
+  currentUserId: string
+): Promise<ValidationResult<null>> {
+  if (!userId) {
+    return { ok: false, errors: { userAccess: "Choose a user to remove." } };
+  }
+  if (userId === currentUserId) {
+    return { ok: false, errors: { userAccess: "You cannot remove your own access while signed in." } };
+  }
+
+  const membership = await env.DB.prepare(
+    "SELECT role FROM organization_members WHERE organization_id = ? AND user_id = ?"
+  )
+    .bind(organizationId, userId)
+    .first<{ role: Role }>();
+
+  if (!membership) {
+    return { ok: false, errors: { userAccess: "That user no longer has access to this organization." } };
+  }
+  if (membership.role === "owner") {
+    return { ok: false, errors: { userAccess: "The owner account cannot be removed from the organization." } };
+  }
+
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM organization_members WHERE organization_id = ? AND user_id = ?")
+      .bind(organizationId, userId),
+    env.DB.prepare(
+      "DELETE FROM sessions WHERE user_id = ? AND (current_organization_id = ? OR current_organization_id IS NULL)"
+    ).bind(userId, organizationId)
+  ]);
+
+  return { ok: true, data: null };
+}
+
 export async function switchOrganization(
   env: Env,
   context: AuthContext,

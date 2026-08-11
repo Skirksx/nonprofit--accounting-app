@@ -6,6 +6,7 @@ import {
   listUserOrganizations,
   logout,
   redirect,
+  removeOrganizationUser,
   requireAuth,
   requireRole,
   switchOrganization,
@@ -171,6 +172,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
   { method: "POST", path: "/settings/users", handler: postSettingsUsers },
+  { method: "POST", path: "/settings/users/remove", handler: postSettingsUsersRemove },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
   { method: "GET", path: "/reports/account-register", handler: getAccountRegister },
   { method: "GET", path: "/reports/account-register.csv", handler: getAccountRegisterCsv },
@@ -1104,6 +1106,24 @@ async function postSettingsUsers(request: Request, env: Env): Promise<Response> 
 
   const created = await createOrganizationUser(env, context.organization.id, result.data);
   if (!created.ok) return settingsPage(env.APP_NAME, context, created.errors, await settingsUsers(env, context));
+
+  return redirect("/settings");
+}
+
+async function postSettingsUsersRemove(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  const userId = String(form.get("userId") ?? "");
+  const removed = await removeOrganizationUser(env, context.organization.id, userId, context.user.id);
+  if (!removed.ok) return settingsPage(env.APP_NAME, context, removed.errors, await settingsUsers(env, context));
 
   return redirect("/settings");
 }

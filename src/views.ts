@@ -717,20 +717,22 @@ function organizationUsersPanel(
             <td>${escapeHtml(user.name)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${formatStatus(user.role)}</td>
+            <td>${organizationUserAction(context, user)}</td>
           </tr>`
         )
         .join("")
-    : `<tr><td colspan="3" class="empty">No users have been added yet.</td></tr>`;
+    : `<tr><td colspan="4" class="empty">No users have been added yet.</td></tr>`;
 
   return `<section class="content-band settings-users">
     <div>
       <p class="eyebrow">Access</p>
       <h2>Organization users</h2>
       <p class="muted">Add people who should sign in to ${escapeHtml(context.organization.name)} with their own email and password.</p>
+      ${errors.userAccess ? `<p class="alert">${escapeHtml(errors.userAccess)}</p>` : ""}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Email / username</th><th>Access level</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email / username</th><th>Access level</th><th>Action</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -760,6 +762,17 @@ function organizationUsersPanel(
       <button type="submit">Add user</button>
     </form>
   </section>`;
+}
+
+function organizationUserAction(context: AuthContext, user: OrganizationUser): string {
+  if (user.id === context.user.id) return `<span class="muted">You</span>`;
+  if (user.role === "owner") return `<span class="muted">Owner protected</span>`;
+
+  return `<form method="post" action="/settings/users/remove" class="table-edit-form">
+    <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+    <input type="hidden" name="userId" value="${escapeHtml(user.id)}">
+    <button class="danger-button small-button" type="submit">Remove access</button>
+  </form>`;
 }
 
 export function fundsPage(
