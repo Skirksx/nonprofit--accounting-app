@@ -110,9 +110,8 @@ test("opens member dues invoice draft in Stephen Kirk Outlook", () => {
   const href = memberInvoiceEmailHref(memberDuesInvoice(member, settings));
   const url = new URL(href);
 
-  assert.equal(url.origin, "https://outlook.office.com");
-  assert.equal(url.pathname, "/mail/deeplink/compose");
+  assert.equal(url.protocol, "ms-outlook:");
+  assert.equal(url.host, "compose");
   assert.equal(url.searchParams.get("to"), "meranda@example.com");
-  assert.equal(url.searchParams.get("login_hint"), "Sbkirk@outlook.com");
   assert.match(url.searchParams.get("body") ?? "", /Stephen Kirk/);
 });
