@@ -38,6 +38,9 @@ export type MemberInvoice = {
   totalCents: number;
 };
 
+const invoiceSenderName = "Stephen Kirk";
+const invoiceSenderEmail = "Sbkirk@outlook.com";
+
 type PdfImage = {
   bytes: Uint8Array;
   width: number;
@@ -288,9 +291,16 @@ export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
     `Attached is your M&M Rotary Club dues invoice for fiscal year ${invoice.settings.fiscal_year}.`,
     `Amount due: ${formatMoney(invoice.totalCents)}`,
     "",
-    "Thank you,"
+    "Thank you,",
+    invoiceSenderName
   ].join("\n");
-  return `mailto:${encodeURIComponent(invoice.member.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const params = new URLSearchParams({
+    to: invoice.member.email,
+    subject,
+    body,
+    login_hint: invoiceSenderEmail
+  });
+  return `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
 }
 
 export function frequencyLabel(value: DuesFrequency): string {
