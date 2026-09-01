@@ -1,11 +1,10 @@
-import type { AccountStatusFilter, ChartAccount } from "./accounts.ts";
+import type { ChartAccount } from "./accounts.ts";
 import type { OrganizationUser, UserOrganization } from "./auth.ts";
 import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
 import {
   frequencyLabel,
   invoiceIncludedLabel,
   memberDuesInvoice,
-  memberInvoiceEmailHref,
   type MemberDuesRecord,
   type MemberDuesSettings
 } from "./memberDues.ts";
@@ -382,7 +381,7 @@ export function memberDuesDetailPage(appName: string, context: AuthContext, memb
           <div class="form-actions dues-actions">
             <a href="/member-dues">Back to tracker</a>
             <a class="button-like" href="/member-dues/invoice.pdf?id=${encodeURIComponent(member.id)}">Create invoice PDF</a>
-            ${member.email ? `<a class="button-like" href="${escapeHtml(memberInvoiceEmailHref(invoice))}">Open email draft</a>` : ""}
+            ${member.email ? `<a class="button-like" href="/member-dues/invoice-email.eml?id=${encodeURIComponent(member.id)}">Open email draft</a>` : ""}
           </div>
         </div>
       </section>`
@@ -717,22 +716,20 @@ function organizationUsersPanel(
             <td>${escapeHtml(user.name)}</td>
             <td>${escapeHtml(user.email)}</td>
             <td>${formatStatus(user.role)}</td>
-            <td>${organizationUserAction(context, user)}</td>
           </tr>`
         )
         .join("")
-    : `<tr><td colspan="4" class="empty">No users have been added yet.</td></tr>`;
+    : `<tr><td colspan="3" class="empty">No users have been added yet.</td></tr>`;
 
   return `<section class="content-band settings-users">
     <div>
       <p class="eyebrow">Access</p>
       <h2>Organization users</h2>
       <p class="muted">Add people who should sign in to ${escapeHtml(context.organization.name)} with their own email and password.</p>
-      ${errors.userAccess ? `<p class="alert">${escapeHtml(errors.userAccess)}</p>` : ""}
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Name</th><th>Email / username</th><th>Access level</th><th>Action</th></tr></thead>
+        <thead><tr><th>Name</th><th>Email / username</th><th>Access level</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -762,17 +759,6 @@ function organizationUsersPanel(
       <button type="submit">Add user</button>
     </form>
   </section>`;
-}
-
-function organizationUserAction(context: AuthContext, user: OrganizationUser): string {
-  if (user.id === context.user.id) return `<span class="muted">You</span>`;
-  if (user.role === "owner") return `<span class="muted">Owner protected</span>`;
-
-  return `<form method="post" action="/settings/users/remove" class="table-edit-form">
-    <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
-    <input type="hidden" name="userId" value="${escapeHtml(user.id)}">
-    <button class="danger-button small-button" type="submit">Remove access</button>
-  </form>`;
 }
 
 export function fundsPage(
@@ -931,19 +917,18 @@ export function accountsPage(
   appName: string,
   context: AuthContext,
   accounts: ChartAccount[],
-  errors: Record<string, string> = {},
-  statusFilter: AccountStatusFilter = "active"
+  errors: Record<string, string> = {}
 ): Response {
   const rows = accounts.length
     ? accounts
         .map(
           (account) => `<tr>
+            <td>${escapeHtml(account.organization_id)}</td>
             <td>${escapeHtml(account.account_number)}</td>
             <td>${escapeHtml(account.account_name)}</td>
             <td>${formatAccountType(account.account_type)}</td>
             <td>${escapeHtml(account.normal_balance)}</td>
             <td>${formatStatus(account.status)}</td>
-            <td>${accountStatusAction(context, account, statusFilter)}</td>
           </tr>`
         )
         .join("")
@@ -958,11 +943,6 @@ export function accountsPage(
         <h1>Chart of accounts</h1>
         <p class="muted">Create the initial account list used for nonprofit transactions and reports.</p>
       </section>
-      <nav class="report-nav" aria-label="Account status filter">
-        <a href="/accounts?status=active"${statusFilter === "active" ? ` aria-current="page"` : ""}>Active accounts</a>
-        <a href="/accounts?status=inactive"${statusFilter === "inactive" ? ` aria-current="page"` : ""}>Inactive accounts</a>
-        <a href="/accounts?status=all"${statusFilter === "all" ? ` aria-current="page"` : ""}>All accounts</a>
-      </nav>
       <section class="split">
         <form method="post" action="/accounts" class="form-card">
           <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
@@ -997,25 +977,12 @@ export function accountsPage(
         </form>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Number</th><th>Name</th><th>Type</th><th>Normal</th><th>Status</th><th>Action</th></tr></thead>
+            <thead><tr><th>Organization ID</th><th>Number</th><th>Name</th><th>Type</th><th>Normal</th><th>Status</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
       </section>`
   });
-}
-
-function accountStatusAction(context: AuthContext, account: ChartAccount, statusFilter: AccountStatusFilter): string {
-  const nextStatus = account.status === "active" ? "inactive" : "active";
-  const label = account.status === "active" ? "Make inactive" : "Make active";
-
-  return `<form method="post" action="/accounts/status" class="table-edit-form">
-    <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
-    <input type="hidden" name="accountId" value="${escapeHtml(account.id)}">
-    <input type="hidden" name="status" value="${escapeHtml(nextStatus)}">
-    <input type="hidden" name="returnStatus" value="${escapeHtml(statusFilter)}">
-    <button class="${account.status === "active" ? "danger-button " : ""}small-button" type="submit">${label}</button>
-  </form>`;
 }
 
 export function transactionEntryPage(
