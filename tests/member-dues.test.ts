@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   createMemberDuesInvoicePdf,
+  memberInvoiceEmailHref,
   memberDuesInvoice,
   parseMemberDuesSettings,
   parseMemberDuesUpdate,
@@ -80,4 +81,38 @@ test("creates member dues invoice PDF", () => {
   assert.match(text, /Member Dues/);
   assert.match(text, /Quarter 1 - FY 2026-27/);
   assert.match(text, /Quarterly meals at \$11.00 per Tuesday meeting/);
+});
+
+test("opens member dues invoice draft in Stephen Kirk Outlook", () => {
+  const member: MemberDuesRecord = {
+    id: "dues_1",
+    organization_id: "org_1",
+    member_name: "Bell, Meranda K",
+    email: "meranda@example.com",
+    address: "",
+    dues_frequency: "quarterly",
+    invoice_included: "dues_only",
+    q1_paid: 0,
+    q2_paid: 0,
+    q3_paid: 0,
+    q4_paid: 0,
+    notes: ""
+  };
+  const settings: MemberDuesSettings = {
+    id: "settings_1",
+    organization_id: "org_1",
+    fiscal_year: "2026-2027",
+    quarterly_dues_cents: 4000,
+    meal_cents: 1100,
+    meeting_day: "Tuesday"
+  };
+
+  const href = memberInvoiceEmailHref(memberDuesInvoice(member, settings));
+  const url = new URL(href);
+
+  assert.equal(url.origin, "https://outlook.office.com");
+  assert.equal(url.pathname, "/mail/deeplink/compose");
+  assert.equal(url.searchParams.get("to"), "meranda@example.com");
+  assert.equal(url.searchParams.get("login_hint"), "Sbkirk@outlook.com");
+  assert.match(url.searchParams.get("body") ?? "", /Stephen Kirk/);
 });
