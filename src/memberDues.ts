@@ -300,7 +300,7 @@ export function memberInvoiceEmailDraftFilename(): string {
 export function createMemberDuesInvoiceEmailDraft(invoice: MemberInvoice, organizationName: string): string {
   const boundary = `member-dues-invoice-${randomId("draft").replace(/[^A-Za-z0-9]/g, "")}`;
   const pdf = createMemberDuesInvoicePdf(invoice, organizationName);
-  const pdfFilename = `member-dues-invoice-${filenameSafe(invoice.member.member_name)}.pdf`;
+  const pdfFilename = memberDuesInvoicePdfFilename(invoice);
   const headers = [
     `From: ${mimeAddress(invoiceSenderName, invoiceSenderEmail)}`,
     `To: ${sanitizeHeader(invoice.member.email)}`,
@@ -327,11 +327,15 @@ export function createMemberDuesInvoiceEmailDraft(invoice: MemberInvoice, organi
   return [...headers, "", ...parts].join("\r\n");
 }
 
-function memberInvoiceEmailSubject(invoice: MemberInvoice): string {
+export function memberDuesInvoicePdfFilename(invoice: MemberInvoice): string {
+  return `member-dues-invoice-${filenameSafe(invoice.member.member_name)}.pdf`;
+}
+
+export function memberInvoiceEmailSubject(invoice: MemberInvoice): string {
   return `M&M Rotary Club dues invoice ${invoice.settings.fiscal_year}`;
 }
 
-function memberInvoiceEmailBody(invoice: MemberInvoice): string {
+export function memberInvoiceEmailBody(invoice: MemberInvoice): string {
   return [
     `Hello ${invoice.member.member_name.split("\n")[0]},`,
     "",
