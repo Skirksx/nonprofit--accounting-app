@@ -1,4 +1,5 @@
 import { randomId } from "./crypto.ts";
+import { rotaryLogoDataUrl } from "./reports.ts";
 import type { Env } from "./types.ts";
 
 export type DuesFrequency = "annual" | "semi_annual" | "quarterly" | "";
@@ -35,6 +36,12 @@ export type MemberInvoice = {
   settings: MemberDuesSettings;
   lineItems: Array<{ description: string; amountCents: number }>;
   totalCents: number;
+};
+
+type PdfImage = {
+  bytes: Uint8Array;
+  width: number;
+  height: number;
 };
 
 const DEFAULT_SETTINGS: Omit<MemberDuesSettings, "id" | "organization_id"> = {
@@ -212,40 +219,65 @@ export function memberDuesInvoice(member: MemberDuesRecord, settings: MemberDues
 }
 
 export function createMemberDuesInvoicePdf(invoice: MemberInvoice, organizationName: string): ArrayBuffer {
+  const rotaryLogo = pdfImageFromJpeg(rotaryLogoDataUrl().split(",")[1] ?? "", 198, 146);
+  const clubName = invoiceOrganizationDisplayName(organizationName);
+  const invoiceDate = formatInvoiceDate(new Date());
+  const rows = invoiceDisplayRows(invoice);
   const stream = [
     pdfFillRect(0, 0, 612, 792, "1 1 1"),
-    pdfStrokeRect(42, 44, 528, 704, "0.09 0.27 0.56", 2),
-    pdfFillRect(42, 656, 528, 92, "0.09 0.27 0.56"),
-    pdfTextAt(organizationName, 72, 706, 18, "F2", "1 1 1"),
-    pdfTextAt("Member Dues Invoice", 72, 676, 28, "F2", "1 1 1"),
-    pdfTextAt(`Fiscal year ${invoice.settings.fiscal_year}`, 72, 640, 11, "F1", "0.09 0.27 0.56"),
-    pdfTextAt("Bill to", 72, 596, 12, "F2", "0.09 0.27 0.56"),
-    ...addressLines(invoice.member).flatMap((line, index) => [
-      pdfTextAt(line, 72, 576 - index * 16, 11, index === 0 ? "F2" : "F1", "0.10 0.12 0.14")
-    ]),
-    pdfTextAt("Description", 72, 446, 10, "F2", "0.09 0.27 0.56"),
-    pdfTextAt("Amount", 468, 446, 10, "F2", "0.09 0.27 0.56"),
-    pdfStrokeLine(72, 432, 540, 432, "0.78 0.86 0.94")
+    pdfFillRect(0, 770, 612, 6, "0.17 0.20 0.57"),
+    pdfTextAt("Rotary", 42, 696, 42, "F2", "0.00 0.23 0.56"),
+    pdfImageAt("Im1", 180, 666, 82, 60),
+    pdfRightText("Invoice", 542, 710, 36, "F1", "0.17 0.20 0.57"),
+    pdfCenteredText(clubName, 430, 678, 19, "F2", "0.00 0.32 0.60"),
+    pdfCenteredText("PO Box 154", 430, 654, 12, "F1", "0.00 0.32 0.60"),
+    pdfCenteredText("McConnelsville, Ohio 43756", 430, 636, 11, "F1", "0.00 0.32 0.60"),
+    pdfTextAt(`Invoice Date: ${invoiceDate}`, 42, 568, 12, "F2", "0.00 0.32 0.60"),
+    pdfTextAt("Invoice for", 42, 526, 14, "F2", "0.00 0.32 0.60"),
+    pdfTextAt(invoice.member.member_name.split("\n")[0], 42, 506, 12, "F1", "0 0 0"),
+    pdfTextAt("Payable to", 204, 526, 14, "F2", "0.00 0.32 0.60"),
+    pdfTextAt(clubName, 204, 506, 12, "F1", "0 0 0"),
+    pdfTextAt("Due date", 440, 526, 14, "F2", "0.00 0.32 0.60"),
+    pdfTextAt("Upon Receipt", 440, 506, 12, "F1", "0 0 0"),
+    pdfStrokeLine(40, 438, 500, 438, "0.70 0.70 0.70"),
+    pdfTextAt("Description", 42, 404, 13, "F2", "0.17 0.20 0.57"),
+    pdfRightText("Qty", 336, 404, 13, "F2", "0.17 0.20 0.57"),
+    pdfRightText("Unit price", 424, 404, 13, "F2", "0.17 0.20 0.57"),
+    pdfRightText("Total price", 500, 404, 13, "F2", "0.17 0.20 0.57")
   ];
 
-  let y = 406;
-  for (const item of invoice.lineItems) {
+  let y = 382;
+  rows.forEach((item, index) => {
     stream.push(
-      pdfTextAt(item.description, 72, y, 11, "F1", "0.10 0.12 0.14"),
-      pdfRightText(formatMoney(item.amountCents), 540, y, 11, "F1", "0.10 0.12 0.14")
+      ...(index % 2 === 0 ? [pdfFillRect(40, y - 6, 460, 18, "0.94 0.94 0.94")] : []),
+      pdfTextAt(item.description, 42, y, 11, "F1", "0 0 0"),
+      pdfRightText("1", 336, y, 11, "F1", "0 0 0"),
+      pdfRightText(formatMoney(item.amountCents), 424, y, 11, "F1", "0 0 0"),
+      pdfRightText(formatMoney(item.amountCents), 500, y, 11, "F1", "0 0 0")
     );
-    y -= 24;
-  }
+    y -= 18;
+    if (item.detail) {
+      stream.push(pdfTextAt(item.detail, 86, y, 11, "F1", "0 0 0"));
+      y -= 30;
+    } else {
+      y -= 18;
+    }
+  });
 
   stream.push(
-    pdfStrokeLine(360, y - 2, 540, y - 2, "0.09 0.27 0.56"),
-    pdfTextAt("Total due", 360, y - 28, 14, "F2", "0.09 0.27 0.56"),
-    pdfRightText(formatMoney(invoice.totalCents), 540, y - 28, 14, "F2", "0.09 0.27 0.56"),
-    pdfTextAt("Please remit payment to Malta & McConnelsville Rotary Club.", 72, 148, 10, "F1", "0.35 0.40 0.37"),
-    pdfTextAt("Thank you for supporting Rotary service projects.", 72, 128, 10, "F3", "0.35 0.40 0.37")
+    pdfFillRect(40, y - 2, 460, 18, "0.94 0.94 0.94"),
+    pdfStrokeLine(40, y - 2, 500, y - 2, "0.70 0.70 0.70"),
+    pdfTextAt("Notes:", 42, y - 28, 11, "F1", "0.25 0.25 0.25"),
+    pdfStrokeLine(362, y - 2, 500, y - 2, "0.70 0.70 0.70"),
+    pdfRightText("Subtotal", 424, y - 30, 12, "F1", "0.17 0.20 0.57"),
+    pdfRightText(formatMoney(invoice.totalCents), 500, y - 30, 12, "F2", "0 0 0"),
+    pdfRightText("Adjustments", 424, y - 52, 12, "F1", "0.17 0.20 0.57"),
+    pdfRightText("$0.00", 500, y - 52, 12, "F2", "0.42 0.42 0.42"),
+    pdfFillRect(340, y - 84, 160, 28, "1.00 0.84 0.38"),
+    pdfRightText(formatMoney(invoice.totalCents), 496, y - 76, 20, "F2", "0.00 0.32 0.60")
   );
 
-  return buildPdf(stream.join("\n"));
+  return buildPdf(stream.join("\n"), rotaryLogo);
 }
 
 export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
@@ -417,15 +449,67 @@ function formatMoney(amountCents: number): string {
   return `$${(amountCents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function buildPdf(stream: string): ArrayBuffer {
+function invoiceDisplayRows(invoice: MemberInvoice): Array<{ description: string; detail: string; amountCents: number }> {
+  const fiscalYear = invoice.settings.fiscal_year.replace("2026-2027", "2026-27");
+  const duesItem = invoice.lineItems.find((item) => /member dues/i.test(item.description));
+  const otherItems = invoice.lineItems.filter((item) => !/member dues/i.test(item.description));
+  const rows: Array<{ description: string; detail: string; amountCents: number }> = [];
+
+  if (duesItem && invoice.member.dues_frequency === "annual") {
+    for (let quarter = 1; quarter <= 4; quarter += 1) {
+      rows.push({
+        description: "Member Dues",
+        detail: `Quarter ${quarter} - FY ${fiscalYear}`,
+        amountCents: invoice.settings.quarterly_dues_cents
+      });
+    }
+  } else if (duesItem && invoice.member.dues_frequency === "semi_annual") {
+    for (let half = 1; half <= 2; half += 1) {
+      rows.push({
+        description: "Member Dues",
+        detail: half === 1 ? `Quarters 1-2 - FY ${fiscalYear}` : `Quarters 3-4 - FY ${fiscalYear}`,
+        amountCents: invoice.settings.quarterly_dues_cents * 2
+      });
+    }
+  } else if (duesItem) {
+    rows.push({
+      description: "Member Dues",
+      detail: `Quarter 1 - FY ${fiscalYear}`,
+      amountCents: duesItem.amountCents
+    });
+  }
+
+  otherItems.forEach((item) => rows.push({ description: item.description, detail: "", amountCents: item.amountCents }));
+  return rows.length ? rows : invoice.lineItems.map((item) => ({ ...item, detail: "" }));
+}
+
+function invoiceOrganizationDisplayName(organizationName: string): string {
+  return organizationName.replaceAll(" & ", " ").replace(/\s+Club$/i, "").trim() || organizationName;
+}
+
+function formatInvoiceDate(date: Date): string {
+  return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
+function buildPdf(stream: string, image?: PdfImage): ArrayBuffer {
+  const imageObject = image
+    ? [
+        binaryObject(
+          `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.byteLength} >>`,
+          image.bytes
+        )
+      ]
+    : [];
+  const imageResource = image ? " /XObject << /Im1 8 0 R >>" : "";
   const objects = [
     textBytes("<< /Type /Catalog /Pages 2 0 R >>"),
     textBytes("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
-    textBytes("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >> >> /Contents 7 0 R >>"),
+    textBytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R /F3 6 0 R >>${imageResource} >> /Contents 7 0 R >>`),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>"),
     textBytes("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>"),
-    binaryObject(`<< /Length ${textBytes(stream).byteLength} >>`, textBytes(stream))
+    binaryObject(`<< /Length ${textBytes(stream).byteLength} >>`, textBytes(stream)),
+    ...imageObject
   ];
   let pdf = textBytes("%PDF-1.4\n");
   const offsets = [0];
@@ -452,6 +536,14 @@ function pdfRightText(value: string, x: number, y: number, size: number, font: s
   return pdfTextAt(value, x - value.length * size * 0.54, y, size, font, color);
 }
 
+function pdfCenteredText(value: string, centerX: number, y: number, size: number, font: string, color: string): string {
+  return pdfTextAt(value, centerX - value.length * size * 0.27, y, size, font, color);
+}
+
+function pdfImageAt(name: string, x: number, y: number, width: number, height: number): string {
+  return `q ${width} 0 0 ${height} ${x} ${y} cm /${name} Do Q`;
+}
+
 function pdfFillRect(x: number, y: number, width: number, height: number, color: string): string {
   return `q ${color} rg ${x} ${y} ${width} ${height} re f Q`;
 }
@@ -474,6 +566,17 @@ function textBytes(value: string): Uint8Array {
 
 function binaryObject(dictionary: string, bytes: Uint8Array): Uint8Array {
   return concatBytes(textBytes(`${dictionary}\nstream\n`), bytes, textBytes("\nendstream"));
+}
+
+function pdfImageFromJpeg(base64: string, width: number, height: number): PdfImage {
+  return { bytes: base64Bytes(base64), width, height };
+}
+
+function base64Bytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
 }
 
 function concatBytes(...chunks: Uint8Array[]): Uint8Array {
