@@ -1,6 +1,10 @@
 export type Env = {
   DB: D1Database;
   APP_NAME: string;
+  MICROSOFT_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_SECRET?: string;
+  MICROSOFT_TENANT?: string;
+  OUTLOOK_TOKEN_SECRET?: string;
 };
 
 export type Role = "owner" | "admin" | "accountant" | "viewer";
