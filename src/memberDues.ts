@@ -40,6 +40,7 @@ export type MemberInvoice = {
 
 const invoiceSenderName = "Stephen Kirk";
 const invoiceSenderEmail = "Sbkirk@outlook.com";
+const invoiceDraftFilename = "member-dues-invoice-email-draft.eml";
 
 type PdfImage = {
   bytes: Uint8Array;
@@ -284,8 +285,54 @@ export function createMemberDuesInvoicePdf(invoice: MemberInvoice, organizationN
 }
 
 export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
-  const subject = `M&M Rotary Club dues invoice ${invoice.settings.fiscal_year}`;
-  const body = [
+  const params = new URLSearchParams({
+    to: invoice.member.email,
+    subject: memberInvoiceEmailSubject(invoice),
+    body: memberInvoiceEmailBody(invoice)
+  });
+  return `ms-outlook://compose?${params.toString()}`;
+}
+
+export function memberInvoiceEmailDraftFilename(): string {
+  return invoiceDraftFilename;
+}
+
+export function createMemberDuesInvoiceEmailDraft(invoice: MemberInvoice, organizationName: string): string {
+  const boundary = `member-dues-invoice-${randomId("draft").replace(/[^A-Za-z0-9]/g, "")}`;
+  const pdf = createMemberDuesInvoicePdf(invoice, organizationName);
+  const pdfFilename = `member-dues-invoice-${filenameSafe(invoice.member.member_name)}.pdf`;
+  const headers = [
+    `From: ${mimeAddress(invoiceSenderName, invoiceSenderEmail)}`,
+    `To: ${sanitizeHeader(invoice.member.email)}`,
+    `Subject: ${sanitizeHeader(memberInvoiceEmailSubject(invoice))}`,
+    `Date: ${new Date().toUTCString()}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`
+  ];
+  const parts = [
+    `--${boundary}`,
+    "Content-Type: text/plain; charset=UTF-8",
+    "Content-Transfer-Encoding: base64",
+    "",
+    wrapBase64(utf8ToBase64(memberInvoiceEmailBody(invoice))),
+    `--${boundary}`,
+    `Content-Type: application/pdf; name="${pdfFilename}"`,
+    "Content-Transfer-Encoding: base64",
+    `Content-Disposition: attachment; filename="${pdfFilename}"`,
+    "",
+    wrapBase64(arrayBufferToBase64(pdf)),
+    `--${boundary}--`,
+    ""
+  ];
+  return [...headers, "", ...parts].join("\r\n");
+}
+
+function memberInvoiceEmailSubject(invoice: MemberInvoice): string {
+  return `M&M Rotary Club dues invoice ${invoice.settings.fiscal_year}`;
+}
+
+function memberInvoiceEmailBody(invoice: MemberInvoice): string {
+  return [
     `Hello ${invoice.member.member_name.split("\n")[0]},`,
     "",
     `Attached is your M&M Rotary Club dues invoice for fiscal year ${invoice.settings.fiscal_year}.`,
@@ -294,12 +341,6 @@ export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
     "Thank you,",
     invoiceSenderName
   ].join("\n");
-  const params = new URLSearchParams({
-    to: invoice.member.email,
-    subject,
-    body
-  });
-  return `ms-outlook://compose?${params.toString()}`;
 }
 
 export function frequencyLabel(value: DuesFrequency): string {
@@ -498,6 +539,37 @@ function invoiceOrganizationDisplayName(organizationName: string): string {
 
 function formatInvoiceDate(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
+}
+
+function arrayBufferToBase64(value: ArrayBuffer): string {
+  const bytes = new Uint8Array(value);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function utf8ToBase64(value: string): string {
+  return arrayBufferToBase64(new TextEncoder().encode(value).buffer);
+}
+
+function wrapBase64(value: string): string {
+  return value.match(/.{1,76}/g)?.join("\r\n") ?? "";
+}
+
+function mimeAddress(name: string, email: string): string {
+  return `"${sanitizeHeader(name).replaceAll('"', '\\"')}" <${sanitizeHeader(email)}>`;
+}
+
+function sanitizeHeader(value: string): string {
+  return value.replace(/[\r\n]/g, " ").trim();
+}
+
+function filenameSafe(value: string): string {
+  const firstLine = value.split("\n")[0] || "member";
+  return firstLine.replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "member";
 }
 
 function buildPdf(stream: string, image?: PdfImage): ArrayBuffer {
