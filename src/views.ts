@@ -9,6 +9,7 @@ import {
   type MemberDuesSettings
 } from "./memberDues.ts";
 import type { PayrollEmployee, PayrollEntrySummary, PayrollSummary } from "./payroll.ts";
+import type { OutlookConnectionStatus } from "./outlook.ts";
 import type {
   AccountRegisterReport,
   BalanceSheetReport,
@@ -381,7 +382,7 @@ export function memberDuesDetailPage(appName: string, context: AuthContext, memb
           <div class="form-actions dues-actions">
             <a href="/member-dues">Back to tracker</a>
             <a class="button-like" href="/member-dues/invoice.pdf?id=${encodeURIComponent(member.id)}">Create invoice PDF</a>
-            ${member.email ? `<a class="button-like" href="/member-dues/invoice-email.eml?id=${encodeURIComponent(member.id)}">Open email draft</a>` : ""}
+            ${member.email ? `<a class="button-like" href="/member-dues/outlook-draft?id=${encodeURIComponent(member.id)}">Open email draft</a>` : ""}
           </div>
         </div>
       </section>`
@@ -638,7 +639,8 @@ export function settingsPage(
   appName: string,
   context: AuthContext,
   errors: Record<string, string> = {},
-  organizationUsers: OrganizationUser[] = []
+  organizationUsers: OrganizationUser[] = [],
+  outlookStatus: OutlookConnectionStatus = { connected: false }
 ): Response {
   const canManageUsers = context.role === "owner" || context.role === "admin";
   return layout({
@@ -699,9 +701,31 @@ export function settingsPage(
           </label>
           <button type="submit">Upload logo</button>
         </form>
+        ${outlookSettingsCard(context, outlookStatus)}
       </section>`
       + (canManageUsers ? organizationUsersPanel(context, organizationUsers, errors) : "")
   });
+}
+
+function outlookSettingsCard(context: AuthContext, outlookStatus: OutlookConnectionStatus): string {
+  const canManage = context.role === "owner" || context.role === "admin";
+  const statusText = outlookStatus.connected
+    ? `Connected to ${escapeHtml(outlookStatus.displayName || outlookStatus.accountEmail || "Outlook")}`
+    : outlookStatus.error
+      ? escapeHtml(outlookStatus.error)
+      : "Not connected";
+  const action = outlookStatus.connected
+    ? `<form method="post" action="/settings/outlook/disconnect" class="inline-form">
+        <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
+        <button type="submit">Disconnect Outlook</button>
+      </form>`
+    : `<a class="button-like" href="/settings/outlook/connect">Connect Outlook</a>`;
+
+  return `<div class="form-card">
+    <h2>Outlook invoices</h2>
+    <p class="muted">${statusText}</p>
+    ${canManage ? action : ""}
+  </div>`;
 }
 
 function organizationUsersPanel(
