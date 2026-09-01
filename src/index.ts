@@ -1,4 +1,4 @@
-import { accountStats, createAccount, listAccounts, updateAccountStatus, type AccountStatusFilter } from "./accounts.ts";
+import { accountStats, createAccount, listAccounts } from "./accounts.ts";
 import {
   attemptLogin,
   createOrganizationUser,
@@ -6,7 +6,6 @@ import {
   listUserOrganizations,
   logout,
   redirect,
-  removeOrganizationUser,
   requireAuth,
   requireRole,
   switchOrganization,
@@ -45,11 +44,13 @@ import {
   validatePayrollEntryForm
 } from "./payroll.ts";
 import {
+  createMemberDuesInvoiceEmailDraft,
   createMemberDuesInvoicePdf,
   getMemberDuesRecord,
   getMemberDuesSettings,
   listMemberDues,
   memberDuesInvoice,
+  memberInvoiceEmailDraftFilename,
   parseMemberDuesSettings,
   parseMemberDuesUpdate,
   updateMemberDuesSettings,
@@ -133,7 +134,6 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/organizations/switch", handler: postOrganizationSwitch },
   { method: "GET", path: "/accounts", handler: getAccounts },
   { method: "POST", path: "/accounts", handler: postAccounts },
-  { method: "POST", path: "/accounts/status", handler: postAccountStatus },
   { method: "GET", path: "/funds", handler: getFunds },
   { method: "POST", path: "/funds", handler: postFunds },
   { method: "POST", path: "/funds/update", handler: postFundUpdate },
@@ -151,6 +151,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/member-dues/settings", handler: postMemberDuesSettings },
   { method: "GET", path: "/member-dues/member", handler: getMemberDuesMember },
   { method: "GET", path: "/member-dues/invoice.pdf", handler: getMemberDuesInvoicePdf },
+  { method: "GET", path: "/member-dues/invoice-email.eml", handler: getMemberDuesInvoiceEmailDraft },
   { method: "GET", path: "/journal-entries/new", handler: getNewJournalEntry },
   { method: "POST", path: "/journal-entries", handler: postJournalEntries },
   { method: "GET", path: "/journal-entries/edit", handler: getEditJournalEntry },
@@ -173,7 +174,6 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
   { method: "POST", path: "/settings/logo", handler: postSettingsLogo },
   { method: "POST", path: "/settings/users", handler: postSettingsUsers },
-  { method: "POST", path: "/settings/users/remove", handler: postSettingsUsersRemove },
   { method: "GET", path: "/reports/balance-sheet", handler: getBalanceSheet },
   { method: "GET", path: "/reports/account-register", handler: getAccountRegister },
   { method: "GET", path: "/reports/account-register.csv", handler: getAccountRegisterCsv },
@@ -418,13 +418,34 @@ async function getMemberDuesInvoicePdf(request: Request, env: Env): Promise<Resp
   });
 }
 
+async function getMemberDuesInvoiceEmailDraft(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  const [member, settings] = await Promise.all([
+    getMemberDuesRecord(env, context.organization.id, id),
+    getMemberDuesSettings(env, context.organization.id)
+  ]);
+  if (!member) return redirect("/member-dues");
+
+  const draft = createMemberDuesInvoiceEmailDraft(memberDuesInvoice(member, settings), context.organization.name);
+  return new Response(draft, {
+    headers: {
+      "Content-Type": "message/rfc822; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${memberInvoiceEmailDraftFilename()}"`,
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
+}
+
 async function getAccounts(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  const statusFilter = parseAccountStatusFilter(new URL(request.url));
-  const accounts = await listAccounts(env, context.organization.id, statusFilter);
-  return accountsPage(env.APP_NAME, context, accounts, {}, statusFilter);
+  const accounts = await listAccounts(env, context.organization.id);
+  return accountsPage(env.APP_NAME, context, accounts);
 }
 
 async function postAccounts(request: Request, env: Env): Promise<Response> {
@@ -440,8 +461,8 @@ async function postAccounts(request: Request, env: Env): Promise<Response> {
 
   const result = validateAccount(form);
   if (!result.ok) {
-    const accounts = await listAccounts(env, context.organization.id, "all");
-    return accountsPage(env.APP_NAME, context, accounts, result.errors, "all");
+    const accounts = await listAccounts(env, context.organization.id);
+    return accountsPage(env.APP_NAME, context, accounts, result.errors);
   }
 
   try {
@@ -454,34 +475,13 @@ async function postAccounts(request: Request, env: Env): Promise<Response> {
       status: result.data.status
     });
   } catch (error) {
-    const accounts = await listAccounts(env, context.organization.id, "all");
+    const accounts = await listAccounts(env, context.organization.id);
     return accountsPage(env.APP_NAME, context, accounts, {
       accountNumber: "That account number already exists for this organization."
-    }, "all");
+    });
   }
 
   return redirect("/accounts");
-}
-
-async function postAccountStatus(request: Request, env: Env): Promise<Response> {
-  const context = await requireAuth(request, env);
-  if (context instanceof Response) return context;
-
-  const roleError = requireRole(context, "accountant");
-  if (roleError) return roleError;
-
-  const form = await request.formData();
-  const csrfError = validateCsrf(request, form, context);
-  if (csrfError) return csrfError;
-
-  const accountId = String(form.get("accountId") ?? "");
-  const status = String(form.get("status") ?? "");
-  const returnStatus = String(form.get("returnStatus") ?? "all");
-  if (accountId && (status === "active" || status === "inactive")) {
-    await updateAccountStatus(env, context.organization.id, accountId, status);
-  }
-
-  return redirect(`/accounts?status=${encodeURIComponent(parseAccountStatusValue(returnStatus))}`);
 }
 
 async function getFunds(request: Request, env: Env): Promise<Response> {
@@ -1133,24 +1133,6 @@ async function postSettingsUsers(request: Request, env: Env): Promise<Response> 
   return redirect("/settings");
 }
 
-async function postSettingsUsersRemove(request: Request, env: Env): Promise<Response> {
-  const context = await requireAuth(request, env);
-  if (context instanceof Response) return context;
-
-  const roleError = requireRole(context, "admin");
-  if (roleError) return roleError;
-
-  const form = await request.formData();
-  const csrfError = validateCsrf(request, form, context);
-  if (csrfError) return csrfError;
-
-  const userId = String(form.get("userId") ?? "");
-  const removed = await removeOrganizationUser(env, context.organization.id, userId, context.user.id);
-  if (!removed.ok) return settingsPage(env.APP_NAME, context, removed.errors, await settingsUsers(env, context));
-
-  return redirect("/settings");
-}
-
 async function settingsUsers(env: Env, context: Awaited<ReturnType<typeof requireAuth>>) {
   if (context instanceof Response) return [];
   if (context.role !== "owner" && context.role !== "admin") return [];
@@ -1381,14 +1363,6 @@ function validateReportDates(startDate: string, endDate: string): Record<string,
 function parseBudgetYear(url: URL): number {
   const value = Number(url.searchParams.get("fiscalYear") ?? new Date().getFullYear());
   return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : new Date().getFullYear();
-}
-
-function parseAccountStatusFilter(url: URL): AccountStatusFilter {
-  return parseAccountStatusValue(url.searchParams.get("status") ?? "active");
-}
-
-function parseAccountStatusValue(value: string): AccountStatusFilter {
-  return value === "inactive" || value === "all" ? value : "active";
 }
 
 function fiscalYearFromForm(form: FormData): number {
