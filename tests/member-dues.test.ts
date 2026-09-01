@@ -76,7 +76,8 @@ test("creates member dues invoice PDF", () => {
 
   assert.equal(invoice.totalCents, 18300);
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
-  assert.match(text, /Member Dues Invoice/);
-  assert.match(text, /Quarterly member dues/);
+  assert.match(text, /Invoice/);
+  assert.match(text, /Member Dues/);
+  assert.match(text, /Quarter 1 - FY 2026-27/);
   assert.match(text, /Quarterly meals at \$11.00 per Tuesday meeting/);
 });
