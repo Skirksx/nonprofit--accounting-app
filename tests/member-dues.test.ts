@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  createMemberDuesInvoiceEmailDraft,
   createMemberDuesInvoicePdf,
-  memberInvoiceEmailHref,
   memberDuesInvoice,
   parseMemberDuesSettings,
   parseMemberDuesUpdate,
@@ -83,7 +83,7 @@ test("creates member dues invoice PDF", () => {
   assert.match(text, /Quarterly meals at \$11.00 per Tuesday meeting/);
 });
 
-test("opens member dues invoice draft in Stephen Kirk Outlook", () => {
+test("creates member dues invoice email draft with PDF attachment", () => {
   const member: MemberDuesRecord = {
     id: "dues_1",
     organization_id: "org_1",
@@ -107,11 +107,11 @@ test("opens member dues invoice draft in Stephen Kirk Outlook", () => {
     meeting_day: "Tuesday"
   };
 
-  const href = memberInvoiceEmailHref(memberDuesInvoice(member, settings));
-  const url = new URL(href);
+  const draft = createMemberDuesInvoiceEmailDraft(memberDuesInvoice(member, settings), "Malta & McConnelsville Rotary Club");
 
-  assert.equal(url.protocol, "ms-outlook:");
-  assert.equal(url.host, "compose");
-  assert.equal(url.searchParams.get("to"), "meranda@example.com");
-  assert.match(url.searchParams.get("body") ?? "", /Stephen Kirk/);
+  assert.match(draft, /From: "Stephen Kirk" <Sbkirk@outlook\.com>/);
+  assert.match(draft, /To: meranda@example\.com/);
+  assert.match(draft, /Content-Type: application\/pdf; name="member-dues-invoice-Bell-Meranda-K\.pdf"/);
+  assert.match(draft, /Content-Disposition: attachment; filename="member-dues-invoice-Bell-Meranda-K\.pdf"/);
+  assert.match(draft, /JVBER/);
 });
