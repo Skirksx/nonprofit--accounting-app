@@ -49,13 +49,23 @@ import {
   getMemberDuesRecord,
   getMemberDuesSettings,
   listMemberDues,
+  memberDuesInvoicePdfFilename,
   memberDuesInvoice,
+  memberInvoiceEmailBody,
   memberInvoiceEmailDraftFilename,
+  memberInvoiceEmailSubject,
   parseMemberDuesSettings,
   parseMemberDuesUpdate,
   updateMemberDuesSettings,
   updateMemberDuesRecord
 } from "./memberDues.ts";
+import {
+  createOutlookInvoiceDraft,
+  disconnectOutlook,
+  finishOutlookConnect,
+  getOutlookConnectionStatus,
+  startOutlookConnect
+} from "./outlook.ts";
 import {
   balanceSheet,
   budgetReport,
@@ -152,6 +162,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/member-dues/member", handler: getMemberDuesMember },
   { method: "GET", path: "/member-dues/invoice.pdf", handler: getMemberDuesInvoicePdf },
   { method: "GET", path: "/member-dues/invoice-email.eml", handler: getMemberDuesInvoiceEmailDraft },
+  { method: "GET", path: "/member-dues/outlook-draft", handler: getMemberDuesOutlookDraft },
   { method: "GET", path: "/journal-entries/new", handler: getNewJournalEntry },
   { method: "POST", path: "/journal-entries", handler: postJournalEntries },
   { method: "GET", path: "/journal-entries/edit", handler: getEditJournalEntry },
@@ -169,6 +180,9 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "POST", path: "/payroll/entries", handler: postPayrollEntries },
   { method: "POST", path: "/payroll/import/payroll.csv", handler: postPayrollCsvImport },
   { method: "GET", path: "/settings", handler: getSettings },
+  { method: "GET", path: "/settings/outlook/connect", handler: getSettingsOutlookConnect },
+  { method: "GET", path: "/settings/outlook/callback", handler: getSettingsOutlookCallback },
+  { method: "POST", path: "/settings/outlook/disconnect", handler: postSettingsOutlookDisconnect },
   { method: "POST", path: "/settings/profile", handler: postSettingsProfile },
   { method: "POST", path: "/settings/organization-profile", handler: postSettingsOrganizationProfile },
   { method: "POST", path: "/settings/password", handler: postSettingsPassword },
@@ -438,6 +452,33 @@ async function getMemberDuesInvoiceEmailDraft(request: Request, env: Env): Promi
       "X-Content-Type-Options": "nosniff"
     }
   });
+}
+
+async function getMemberDuesOutlookDraft(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const id = new URL(request.url).searchParams.get("id") ?? "";
+  const [member, settings] = await Promise.all([
+    getMemberDuesRecord(env, context.organization.id, id),
+    getMemberDuesSettings(env, context.organization.id)
+  ]);
+  if (!member) return redirect("/member-dues");
+
+  const invoice = memberDuesInvoice(member, settings);
+  const pdf = createMemberDuesInvoicePdf(invoice, context.organization.name);
+  try {
+    const draftLink = await createOutlookInvoiceDraft(env, context.organization.id, {
+      to: member.email,
+      subject: memberInvoiceEmailSubject(invoice),
+      body: memberInvoiceEmailBody(invoice),
+      pdfFilename: memberDuesInvoicePdfFilename(invoice),
+      pdf
+    });
+    return redirect(draftLink);
+  } catch {
+    return redirect(`/settings?outlook=required&member=${encodeURIComponent(member.id)}`);
+  }
 }
 
 async function getAccounts(request: Request, env: Env): Promise<Response> {
@@ -1037,7 +1078,42 @@ async function getSettings(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  return settingsPage(env.APP_NAME, context, {}, await settingsUsers(env, context));
+  return settingsPage(env.APP_NAME, context, {}, await settingsUsers(env, context), await getOutlookConnectionStatus(env, context.organization.id));
+}
+
+async function getSettingsOutlookConnect(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  return startOutlookConnect(request, env, context);
+}
+
+async function getSettingsOutlookCallback(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  return finishOutlookConnect(request, env, context);
+}
+
+async function postSettingsOutlookDisconnect(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+
+  const roleError = requireRole(context, "admin");
+  if (roleError) return roleError;
+
+  const form = await request.formData();
+  const csrfError = validateCsrf(request, form, context);
+  if (csrfError) return csrfError;
+
+  await disconnectOutlook(env, context.organization.id);
+  return redirect("/settings?outlook=disconnected");
 }
 
 async function postSettingsProfile(request: Request, env: Env): Promise<Response> {
