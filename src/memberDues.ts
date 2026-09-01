@@ -297,10 +297,9 @@ export function memberInvoiceEmailHref(invoice: MemberInvoice): string {
   const params = new URLSearchParams({
     to: invoice.member.email,
     subject,
-    body,
-    login_hint: invoiceSenderEmail
+    body
   });
-  return `https://outlook.office.com/mail/deeplink/compose?${params.toString()}`;
+  return `ms-outlook://compose?${params.toString()}`;
 }
 
 export function frequencyLabel(value: DuesFrequency): string {
