@@ -72,12 +72,14 @@ test("creates member dues invoice PDF", () => {
   };
 
   const invoice = memberDuesInvoice(member, settings);
-  const pdf = Buffer.from(createMemberDuesInvoicePdf(invoice, "Malta & McConnelsville Rotary Club"));
+  const pdf = Buffer.from(createMemberDuesInvoicePdf(invoice, "McConnelsville Methodist Church"));
   const text = new TextDecoder().decode(pdf);
 
   assert.equal(invoice.totalCents, 18300);
   assert.equal(pdf.subarray(0, 4).toString(), "%PDF");
   assert.match(text, /Invoice/);
+  assert.match(text, /Malta McConnelsville Rotary/);
+  assert.doesNotMatch(text, /McConnelsville Methodist Church/);
   assert.match(text, /Member Dues/);
   assert.match(text, /Quarter 1 - FY 2026-27/);
   assert.match(text, /Quarterly meals at \$11.00 per Tuesday meeting/);
