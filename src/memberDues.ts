@@ -41,6 +41,7 @@ export type MemberInvoice = {
 const invoiceSenderName = "Stephen Kirk";
 const invoiceSenderEmail = "Sbkirk@outlook.com";
 const invoiceDraftFilename = "member-dues-invoice-email-draft.eml";
+const rotaryInvoiceClubName = "Malta McConnelsville Rotary";
 
 type PdfImage = {
   bytes: Uint8Array;
@@ -222,9 +223,9 @@ export function memberDuesInvoice(member: MemberDuesRecord, settings: MemberDues
   };
 }
 
-export function createMemberDuesInvoicePdf(invoice: MemberInvoice, organizationName: string): ArrayBuffer {
+export function createMemberDuesInvoicePdf(invoice: MemberInvoice, _organizationName: string): ArrayBuffer {
   const rotaryLogo = pdfImageFromJpeg(rotaryLogoDataUrl().split(",")[1] ?? "", 198, 146);
-  const clubName = invoiceOrganizationDisplayName(organizationName);
+  const clubName = rotaryInvoiceClubName;
   const invoiceDate = formatInvoiceDate(new Date());
   const rows = invoiceDisplayRows(invoice);
   const stream = [
