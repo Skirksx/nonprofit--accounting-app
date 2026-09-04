@@ -1558,6 +1558,7 @@ export function html(body: string, init?: ResponseInit): Response {
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("Referrer-Policy", "same-origin");
+  headers.set("Cache-Control", "no-store");
   headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
 
   return new Response(body, {
