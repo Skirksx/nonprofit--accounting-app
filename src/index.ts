@@ -72,6 +72,7 @@ import {
   budgetReport,
   budgetVsActual,
   createBudgetReportPdf,
+  createBudgetVsActualReportPdf,
   createBudgetLine,
   createIncomeStatementReportPdf,
   createStatementOfActivitiesReportPdf,
@@ -196,6 +197,7 @@ const routes: Array<{ method: string; path: string; handler: RouteHandler }> = [
   { method: "GET", path: "/reports/income-statement", handler: getIncomeStatement },
   { method: "GET", path: "/reports/income-statement.pdf", handler: getIncomeStatementPdf },
   { method: "GET", path: "/reports/budget-vs-actual", handler: getBudgetVsActual },
+  { method: "GET", path: "/reports/budget-vs-actual.pdf", handler: getBudgetVsActualPdf },
   { method: "POST", path: "/reports/budget-lines", handler: postBudgetLines },
   { method: "GET", path: "/reports/statement-of-activities", handler: getStatementOfActivities },
   { method: "GET", path: "/reports/statement-of-activities.pdf", handler: getStatementOfActivitiesPdf },
@@ -1281,6 +1283,25 @@ async function getBudgetVsActual(request: Request, env: Env): Promise<Response> 
 
   const report = await budgetVsActual(env, filters);
   return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report, {}, entered);
+}
+
+async function getBudgetVsActualPdf(request: Request, env: Env): Promise<Response> {
+  const context = await requireAuth(request, env);
+  if (context instanceof Response) return context;
+  const filters = parseBudgetVsActualFilters(new URL(request.url), context.organization.id, context.organization.fiscal_year_start_month);
+  if ("errors" in filters) return new Response("Invalid report filters", { status: 400 });
+  const funds = await listFunds(env, context.organization.id);
+  const fund = filters.fundId ? funds.find(item => item.id === filters.fundId) : undefined;
+  if (filters.fundId && !fund) return new Response("Fund not found", { status: 404 });
+  const report = await budgetVsActual(env, filters);
+  return new Response(createBudgetVsActualReportPdf(report, context.organization.name, context.organization.fiscal_year_start_month, fund?.name), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'attachment; filename="budget-vs-actual-' + filters.fiscalYear + '.pdf"',
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
 }
 
 async function postBudgetLines(request: Request, env: Env): Promise<Response> {

@@ -1413,6 +1413,12 @@ export function budgetVsActualPage(
   const budgetAccounts = accounts.filter(
     (account) => account.status === "active" && ["revenue", "expense"].includes(account.account_type)
   );
+  const pdfQuery = report ? new URLSearchParams({
+    fiscalYear: String(report.filters.fiscalYear),
+    startDate: report.filters.startDate,
+    endDate: report.filters.endDate,
+    ...(report.filters.fundId ? { fundId: report.filters.fundId } : {})
+  }).toString() : "";
   const enteredYear = entered.fiscalYear;
   const year = report?.filters.fiscalYear ?? (enteredYear && Number.isInteger(enteredYear) && enteredYear >= 2000 && enteredYear <= 2100
     ? enteredYear : currentFiscalYear(context.organization.fiscal_year_start_month));
@@ -1468,6 +1474,7 @@ export function budgetVsActualPage(
       ${
         report
           ? `<section class="content-band report-section">
+              <a class="button-like" href="/reports/budget-vs-actual.pdf?${escapeHtml(pdfQuery)}">Print PDF</a>
               <h2>Fiscal year ${escapeHtml(fiscalYearLabel(year, context.organization.fiscal_year_start_month))}</h2>
               <p>Actuals: ${escapeHtml(report.filters.startDate)} through ${escapeHtml(report.filters.endDate)} (posted entries only).</p>
               ${report.hasBudgetLines ? "" : '<p class="alert">No budget lines are saved for this fiscal year and fund selection. Enter a budget to calculate variances.</p>'}
