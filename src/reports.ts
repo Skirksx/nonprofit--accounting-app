@@ -1,3 +1,4 @@
+import { currentFiscalYear } from "./fiscalYears.ts";
 import { randomId } from "./crypto.ts";
 import type { AccountType, Env } from "./types.ts";
 import type { ChartAccount } from "./accounts.ts";
@@ -416,12 +417,13 @@ export function parseFinancialReportFilters(
 
 export function parseBudgetVsActualFilters(
   url: URL,
-  organizationId: string
+  organizationId: string,
+  startMonth = 1
 ): BudgetVsActualReport["filters"] | { errors: Record<string, string> } {
   const base = parseFinancialReportFilters(url, organizationId);
   if ("errors" in base) return base;
 
-  const yearText = url.searchParams.get("fiscalYear")?.trim() || String(new Date().getFullYear());
+  const yearText = url.searchParams.get("fiscalYear")?.trim() || String(currentFiscalYear(startMonth));
   const fiscalYear = Number(yearText);
   if (!Number.isInteger(fiscalYear) || fiscalYear < 2000 || fiscalYear > 2100) {
     return { errors: { fiscalYear: "Fiscal year must be a four-digit year." } };
