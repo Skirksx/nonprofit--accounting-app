@@ -1,4 +1,4 @@
-import { currentFiscalYear } from "./fiscalYears.ts";
+import { currentFiscalYear, fiscalYearDates } from "./fiscalYears.ts";
 import { randomId } from "./crypto.ts";
 import type { AccountType, Env } from "./types.ts";
 import type { ChartAccount } from "./accounts.ts";
@@ -185,7 +185,8 @@ export type BudgetVsActualRow = FinancialReportRow & {
 };
 
 export type BudgetVsActualReport = {
-  filters: FinancialReportFilters & { fiscalYear: number };
+  filters: FinancialReportFilters & { fiscalYear: number; startDate: string; endDate: string };
+  hasBudgetLines: boolean;
   rows: BudgetVsActualRow[];
   totalBudgetCents: number;
   totalActualCents: number;
@@ -429,7 +430,18 @@ export function parseBudgetVsActualFilters(
     return { errors: { fiscalYear: "Fiscal year must be a four-digit year." } };
   }
 
-  return { ...base, fiscalYear };
+  const period = fiscalYearDates(fiscalYear, startMonth);
+  const startDate = base.startDate || period.startDate;
+  const endDate = base.endDate || period.endDate;
+  const errors: Record<string, string> = {};
+  if (startDate < period.startDate || startDate > period.endDate) {
+    errors.startDate = "Start date must be within the selected fiscal year.";
+  }
+  if (endDate < period.startDate || endDate > period.endDate) {
+    errors.endDate = "End date must be within the selected fiscal year.";
+  }
+  if (startDate > endDate) errors.endDate = "End date must be on or after the start date.";
+  return Object.keys(errors).length ? { errors } : { ...base, fiscalYear, startDate, endDate };
 }
 
 export async function listFunds(env: Env, organizationId: string): Promise<Fund[]> {
@@ -1022,6 +1034,7 @@ export async function budgetVsActual(
   return {
     filters,
     rows,
+    hasBudgetLines: budgetRows.length > 0,
     totalBudgetCents: rows.reduce((total, row) => total + row.budget_cents, 0),
     totalActualCents: rows.reduce((total, row) => total + row.actual_cents, 0),
     totalVarianceCents: rows.reduce((total, row) => total + row.variance_cents, 0)

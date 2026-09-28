@@ -109,8 +109,8 @@ test("parses budget vs actual fiscal year", () => {
 
   assert.deepEqual(filters, {
     organizationId: "org_1",
-    startDate: undefined,
-    endDate: undefined,
+    startDate: "2026-01-01",
+    endDate: "2026-12-31",
     fundId: undefined,
     fiscalYear: 2026
   });
@@ -769,7 +769,7 @@ test("builds budget vs actual rows", async () => {
     ]
   });
 
-  const report = await budgetVsActual(env, { organizationId: "org_1", fiscalYear: 2026 });
+  const report = await budgetVsActual(env, { organizationId: "org_1", fiscalYear: 2026, startDate: "2026-01-01", endDate: "2026-12-31" });
 
   assert.equal(report.rows.length, 2);
   assert.equal(report.totalBudgetCents, 200000);

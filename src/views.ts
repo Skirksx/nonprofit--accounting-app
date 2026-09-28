@@ -1407,12 +1407,15 @@ export function budgetVsActualPage(
   funds: Fund[],
   accounts: ChartAccount[],
   report: BudgetVsActualReport | null,
-  errors: Record<string, string> = {}
+  errors: Record<string, string> = {},
+  entered: { fiscalYear?: number; startDate?: string; endDate?: string; fundId?: string } = {}
 ): Response {
   const budgetAccounts = accounts.filter(
     (account) => account.status === "active" && ["revenue", "expense"].includes(account.account_type)
   );
-  const year = report?.filters.fiscalYear ?? currentFiscalYear(context.organization.fiscal_year_start_month);
+  const enteredYear = entered.fiscalYear;
+  const year = report?.filters.fiscalYear ?? (enteredYear && Number.isInteger(enteredYear) && enteredYear >= 2000 && enteredYear <= 2100
+    ? enteredYear : currentFiscalYear(context.organization.fiscal_year_start_month));
 
   return layout({
     title: "Budget vs Actual",
@@ -1427,12 +1430,13 @@ export function budgetVsActualPage(
       <section class="split">
         <form method="get" action="/reports/budget-vs-actual" class="form-card">
           ${budgetFiscalYearField(year, context.organization.fiscal_year_start_month, errors.fiscalYear)}
-          ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
-          ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
+          <p class="muted">Dates are optional. Leave them blank to use the selected fiscal year. Custom dates narrow actuals; the budget remains annual.</p>
+          ${dateFilterField("Start date", "startDate", errors.startDate, entered.startDate)}
+          ${dateFilterField("End date", "endDate", errors.endDate, entered.endDate)}
           <label>Fund
             <select name="fundId">
               <option value="">All funds</option>
-              ${fundOptions(funds, report?.filters.fundId)}
+              ${fundOptions(funds, report?.filters.fundId ?? entered.fundId)}
             </select>
           </label>
           <button type="submit">Run report</button>
@@ -1464,13 +1468,11 @@ export function budgetVsActualPage(
       ${
         report
           ? `<section class="content-band report-section">
-              ${budgetVsActualTable(report.rows)}
-              ${reportTotal("Total budget", report.totalBudgetCents)}
-              ${reportTotal("Total actual", report.totalActualCents)}
-              <div class="report-net">
-                <span>Total variance</span>
-                <strong>${formatMoney(report.totalVarianceCents)}</strong>
-              </div>
+              <h2>Fiscal year ${escapeHtml(fiscalYearLabel(year, context.organization.fiscal_year_start_month))}</h2>
+              <p>Actuals: ${escapeHtml(report.filters.startDate)} through ${escapeHtml(report.filters.endDate)} (posted entries only).</p>
+              ${report.hasBudgetLines ? "" : '<p class="alert">No budget lines are saved for this fiscal year and fund selection. Enter a budget to calculate variances.</p>'}
+              ${budgetComparisonSection(report, "expense", "Expenses")}
+              ${budgetComparisonSection(report, "revenue", "Income")}
             </section>`
           : ""
       }`
@@ -1950,7 +1952,7 @@ function accountRegisterTable(report: AccountRegisterReport): string {
   </div>`;
 }
 
-function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
+function budgetVsActualTable(rows: BudgetVsActualRow[], hasBudgetLines = true): string {
   const body = rows.length
     ? rows
         .map(
@@ -1958,9 +1960,9 @@ function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
             <td>${escapeHtml(row.account_number)}</td>
             <td>${escapeHtml(row.account_name)}</td>
             <td>${formatAccountType(row.account_type)}</td>
-            <td class="amount">${formatMoney(row.budget_cents)}</td>
+            <td class="amount">${hasBudgetLines ? formatMoney(row.budget_cents) : "Not entered"}</td>
             <td class="amount">${formatMoney(row.actual_cents)}</td>
-            <td class="amount">${formatMoney(row.variance_cents)}</td>
+            <td class="amount">${hasBudgetLines ? formatMoney(row.variance_cents) : "—"}</td>
           </tr>`
         )
         .join("")
@@ -2155,4 +2157,19 @@ function budgetFiscalYearOptions(selected: number, startMonth: number): string {
 
 function budgetFiscalYearField(year: number, startMonth: number, error?: string): string {
   return `<label>Fiscal year<select name="fiscalYear" required>${budgetFiscalYearOptions(year, startMonth)}</select>${errorText(error)}</label>`;
+}
+
+function budgetComparisonSection(report: BudgetVsActualReport, type: "expense" | "revenue", title: string): string {
+  const rows = report.rows.filter((row) => row.account_type === type);
+  const budget = rows.reduce((sum, row) => sum + row.budget_cents, 0);
+  const actual = rows.reduce((sum, row) => sum + row.actual_cents, 0);
+  const label = type === "expense" ? "expenses" : "income";
+  return `<section aria-label="${title}">
+    <h3>${title}</h3>
+    <p class="muted">${type === "expense" ? "Variance = actual minus budget. Positive means over budget; negative means under budget." : "Variance = actual minus budget. Positive means above budget; negative means below budget."}</p>
+    ${budgetVsActualTable(rows, report.hasBudgetLines)}
+    ${report.hasBudgetLines ? reportTotal("Budgeted " + label, budget) : ""}
+    ${reportTotal("Actual " + label, actual)}
+    ${report.hasBudgetLines ? reportTotal(title + " variance", actual - budget) : ""}
+  </section>`;
 }

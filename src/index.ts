@@ -1,4 +1,4 @@
-import { currentFiscalYear } from "./fiscalYears.ts";
+import { currentFiscalYear, fiscalYearDates } from "./fiscalYears.ts";
 import { accountStats, createAccount, listAccounts } from "./accounts.ts";
 import {
   attemptLogin,
@@ -1271,10 +1271,16 @@ async function getBudgetVsActual(request: Request, env: Env): Promise<Response> 
     listFunds(env, context.organization.id),
     listAccounts(env, context.organization.id)
   ]);
-  if ("errors" in filters) return budgetVsActualPage(env.APP_NAME, context, funds, accounts, null, filters.errors);
+  const entered = {
+    fiscalYear: Number(url.searchParams.get("fiscalYear")) || undefined,
+    startDate: url.searchParams.get("startDate") || "",
+    endDate: url.searchParams.get("endDate") || "",
+    fundId: url.searchParams.get("fundId") || ""
+  };
+  if ("errors" in filters) return budgetVsActualPage(env.APP_NAME, context, funds, accounts, null, filters.errors, entered);
 
   const report = await budgetVsActual(env, filters);
-  return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report);
+  return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report, {}, entered);
 }
 
 async function postBudgetLines(request: Request, env: Env): Promise<Response> {
@@ -1297,7 +1303,8 @@ async function postBudgetLines(request: Request, env: Env): Promise<Response> {
     const year = fiscalYearFromForm(form, context.organization.fiscal_year_start_month);
     const report = await budgetVsActual(env, {
       organizationId: context.organization.id,
-      fiscalYear: year
+      fiscalYear: year,
+      ...fiscalYearDates(year, context.organization.fiscal_year_start_month)
     });
     return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report, result.errors);
   }

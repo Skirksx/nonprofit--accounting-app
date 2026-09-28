@@ -41,7 +41,7 @@ test("budget vs actual uses the selected ending-year key and matching label", as
   assert.ok(!("errors" in filters));
   assert.equal(filters.fiscalYear, 2027);
   const html = await budgetVsActualPage("Ledger", context, [], [], {
-    filters, rows: [], totalBudgetCents: 0, totalActualCents: 0, totalVarianceCents: 0
+    filters, hasBudgetLines: false, rows: [], totalBudgetCents: 0, totalActualCents: 0, totalVarianceCents: 0
   }).text();
   assert.match(html, /<option value="2027" selected>2026-2027<\/option>/);
 });
