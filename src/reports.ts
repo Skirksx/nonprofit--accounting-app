@@ -1,4 +1,4 @@
-import { currentFiscalYear, fiscalYearDates } from "./fiscalYears.ts";
+import { currentFiscalYear, fiscalYearDates, fiscalYearLabel } from "./fiscalYears.ts";
 import { randomId } from "./crypto.ts";
 import type { AccountType, Env } from "./types.ts";
 import type { ChartAccount } from "./accounts.ts";
@@ -995,6 +995,84 @@ export function createStatementOfActivitiesReportPdf(
   return buildSimplePdfPages(pages.map((page) => page.join("\n")), rotaryLogo);
 }
 
+
+export function createBudgetVsActualReportPdf(
+  report: BudgetVsActualReport,
+  organizationName: string,
+  fiscalYearStartMonth: number,
+  fundName = "All funds"
+): ArrayBuffer {
+  const pages: string[][] = [];
+  let operations: string[] = [];
+  let y = 532;
+  const newPage = (): void => {
+    operations = statementOfActivitiesPdfHeader(organizationName,
+      "Fiscal year " + fiscalYearLabel(report.filters.fiscalYear, fiscalYearStartMonth),
+      pages.length + 1, "BUDGET VS ACTUAL");
+    pages.push(operations);
+    operations.push(
+      pdfCenteredText("Actuals: " + report.filters.startDate + " to " + report.filters.endDate, 9, 578, "F1", "0.00 0.23 0.47"),
+      pdfCenteredText("Fund: " + truncatePdfText(fundName, 80), 9, 564, "F1", "0.00 0.23 0.47"),
+      pdfCenteredText("Annual budget; posted actuals for the dates shown.", 8, 550, "F1", "0.10 0.12 0.14"),
+      pdfCenteredText("Service Above Self", 9, 48, "F3", "0.00 0.23 0.47")
+    );
+    y = 522;
+  };
+  newPage();
+  if (!report.hasBudgetLines) {
+    operations.push(pdfTextAt("No budget entered for this fiscal year and fund; variances unavailable.", 62, y, 9, "F2", "0.00 0.23 0.47"));
+    y -= 26;
+  }
+  const widths = [44, 204, 80, 80, 80];
+  const tableRow = (cells: string[], height: number, total = false): void => {
+    const bottom = y - height;
+    if (total) operations.push(pdfFillRect(62, bottom, 488, height, "0.88 0.94 0.98"));
+    operations.push(pdfTableGrid(62, bottom, 488, height, widths, "0.78 0.86 0.94"));
+    let x = 62;
+    cells.forEach((cell, index) => {
+      if (index >= 2) operations.push(pdfRightText(cell, x + widths[index] - 6, y - 12, 8, total ? "F2" : "F1", "0.10 0.12 0.14"));
+      else wrapPdfText(cell, index === 0 ? 7 : 38).forEach((line, lineIndex) =>
+        operations.push(pdfTextAt(line, x + 6, y - 12 - lineIndex * 10, 8, total ? "F2" : "F1", "0.10 0.12 0.14")));
+      x += widths[index];
+    });
+    y = bottom;
+  };
+  for (const [type, title] of [["expense", "EXPENSES"], ["revenue", "INCOME"]] as const) {
+    const rows = report.rows.filter(row => row.account_type === type);
+    const header = (continued = false): void => {
+      operations.push(...pdfSectionIcon(82, y - 10, type === "expense" ? "expenses" : "income"),
+        pdfTextAt(title + (continued ? " (continued)" : ""), 110, y - 19, 17, "F2", "0.00 0.23 0.47"),
+        pdfFillRect(110, y - 27, 440, 2, "0.97 0.67 0.00"));
+      y -= 42;
+      operations.push(pdfTextAt(type === "expense" ? "Variance = actual - budget. Positive means over budget." : "Variance = actual - budget. Positive means above budget.", 62, y, 8, "F1", "0.10 0.12 0.14"));
+      y -= 10;
+      operations.push(pdfFillRect(62, y - 18, 488, 18, "0.00 0.23 0.47"));
+      let x = 62;
+      ["Account", "Description", "Budget", "Actual", "Variance"].forEach((label, index) => {
+        operations.push(pdfTextAt(label, x + 6, y - 12, 8, "F2", "1 1 1"));
+        x += widths[index];
+      });
+      y -= 18;
+    };
+    if (y < 170) newPage();
+    header();
+    for (const row of rows) {
+      const height = Math.max(16, wrapPdfText(row.account_name, 38).length * 10 + 6);
+      if (y - height < 100) { newPage(); header(true); }
+      tableRow([row.account_number, row.account_name,
+        report.hasBudgetLines ? formatMoney(row.budget_cents) : "Not entered",
+        formatMoney(row.actual_cents), report.hasBudgetLines ? formatMoney(row.variance_cents) : "-"], height);
+    }
+    if (!rows.length) tableRow(["", "No activity or budget lines", "", "", ""], 20);
+    if (y < 110) { newPage(); header(true); }
+    const sum = (key: "budget_cents" | "actual_cents" | "variance_cents") => rows.reduce((total, row) => total + row[key], 0);
+    tableRow(["", "TOTAL " + title, report.hasBudgetLines ? formatMoney(sum("budget_cents")) : "Not entered",
+      formatMoney(sum("actual_cents")), report.hasBudgetLines ? formatMoney(sum("variance_cents")) : "-"], 22, true);
+    y -= 20;
+  }
+  return buildSimplePdfPages(pages.map(page => page.join("\n")), pdfImageFromJpeg(ROTARY_LOGO_JPEG_BASE64, 198, 146));
+}
+
 export async function budgetVsActual(
   env: Env,
   filters: BudgetVsActualReport["filters"]
@@ -1384,7 +1462,7 @@ function financialReportSection(
   return y - 20;
 }
 
-function statementOfActivitiesPdfHeader(organizationName: string, period: string, pageNumber: number): string[] {
+function statementOfActivitiesPdfHeader(organizationName: string, period: string, pageNumber: number, title = "STATEMENT OF ACTIVITIES"): string[] {
   return [
     pdfFillRect(0, 0, 612, 792, "1 1 1"),
     pdfStrokeRect(42, 36, 528, 720, "0.00 0.23 0.47", 2),
@@ -1395,7 +1473,7 @@ function statementOfActivitiesPdfHeader(organizationName: string, period: string
     pdfTextAt("Rotary", 336, 704, 34, "F2", "0.00 0.23 0.47"),
     pdfImageAt("Im1", 445, 680, 88, 65),
     pdfTextAt(organizationName, 78, 672, 16, "F1", "0.00 0.23 0.47"),
-    pdfCenteredText("STATEMENT OF ACTIVITIES", 16, 624, "F2", "1 1 1"),
+    pdfCenteredText(title, 16, 624, "F2", "1 1 1"),
     pdfCenteredText(period, 9, 594, "F1", "0.00 0.23 0.47"),
     pdfRightText(`Page ${pageNumber}`, 550, 594, 8, "F1", "0.00 0.23 0.47")
   ];
