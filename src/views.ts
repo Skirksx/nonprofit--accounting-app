@@ -1,3 +1,4 @@
+import { currentFiscalYear, fiscalYearLabel } from "./fiscalYears.ts";
 import type { ChartAccount } from "./accounts.ts";
 import type { OrganizationUser, UserOrganization } from "./auth.ts";
 import type { JournalEntryDetail, JournalEntryLineRecord, JournalEntrySummary } from "./journalEntries.ts";
@@ -1411,7 +1412,7 @@ export function budgetVsActualPage(
   const budgetAccounts = accounts.filter(
     (account) => account.status === "active" && ["revenue", "expense"].includes(account.account_type)
   );
-  const year = report?.filters.fiscalYear ?? new Date().getFullYear();
+  const year = report?.filters.fiscalYear ?? currentFiscalYear(context.organization.fiscal_year_start_month);
 
   return layout({
     title: "Budget vs Actual",
@@ -1425,7 +1426,7 @@ export function budgetVsActualPage(
       ${reportNav()}
       <section class="split">
         <form method="get" action="/reports/budget-vs-actual" class="form-card">
-          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(year), "2026")}
+          ${budgetFiscalYearField(year, context.organization.fiscal_year_start_month, errors.fiscalYear)}
           ${dateFilterField("Start date", "startDate", errors.startDate, report?.filters.startDate)}
           ${dateFilterField("End date", "endDate", errors.endDate, report?.filters.endDate)}
           <label>Fund
@@ -1439,7 +1440,7 @@ export function budgetVsActualPage(
         <form method="post" action="/reports/budget-lines" class="form-card">
           <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
           <h2>Add budget line</h2>
-          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(year), "2026")}
+          ${budgetFiscalYearField(year, context.organization.fiscal_year_start_month, errors.fiscalYear)}
           <label>Account
             <select name="accountId">
               ${accountOptions(budgetAccounts, "No active revenue or expense accounts")}
@@ -1500,7 +1501,7 @@ export function budgetPage(
       </section>
       <section class="split">
         <form method="get" action="/budget" class="form-card">
-          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(fiscalYear), "2026")}
+          ${budgetFiscalYearField(fiscalYear, context.organization.fiscal_year_start_month, errors.fiscalYear)}
           <div class="form-actions">
             <a class="button-like" href="/budget/report.pdf?fiscalYear=${encodeURIComponent(String(fiscalYear))}">Print budget PDF</a>
             <button type="submit">Open year</button>
@@ -1509,7 +1510,7 @@ export function budgetPage(
         <form method="post" action="/budget" class="form-card">
           <input type="hidden" name="csrfToken" value="${escapeHtml(context.csrfToken)}">
           <h2>Add budget line</h2>
-          ${fieldWithValue("Fiscal year", "fiscalYear", "number", errors.fiscalYear, String(fiscalYear), "2026")}
+          ${budgetFiscalYearField(fiscalYear, context.organization.fiscal_year_start_month, errors.fiscalYear)}
           <label>Account
             <select name="accountId">
               ${accountOptions(budgetAccounts, "No active revenue or expense accounts")}
@@ -1533,7 +1534,7 @@ export function budgetPage(
       <section class="content-band report-section budget-editor">
         <h2>Editable budget lines</h2>
         ${errors.budgetLineId ? `<p class="alert">${escapeHtml(errors.budgetLineId)}</p>` : ""}
-        ${budgetLineTable(budgetLines, budgetAccounts, funds, context.csrfToken)}
+        ${budgetLineTable(budgetLines, budgetAccounts, funds, context.csrfToken, context.organization.fiscal_year_start_month)}
       </section>`
   });
 }
@@ -1973,7 +1974,7 @@ function budgetVsActualTable(rows: BudgetVsActualRow[]): string {
   </div>`;
 }
 
-function budgetLineTable(rows: BudgetLineRecord[], accounts: ChartAccount[], funds: Fund[], csrfToken: string): string {
+function budgetLineTable(rows: BudgetLineRecord[], accounts: ChartAccount[], funds: Fund[], csrfToken: string, startMonth: number): string {
   const body = rows.length
     ? rows
         .map(
@@ -1981,7 +1982,7 @@ function budgetLineTable(rows: BudgetLineRecord[], accounts: ChartAccount[], fun
             const formId = `budget-form-${row.id}`;
             return `<tr>
             <td>
-                <input form="${escapeHtml(formId)}" name="fiscalYear" type="number" min="2000" max="2100" value="${escapeHtml(String(row.fiscal_year))}" required>
+                <select form="${escapeHtml(formId)}" name="fiscalYear" aria-label="Fiscal year" required>${budgetFiscalYearOptions(row.fiscal_year, startMonth)}</select>
             </td>
             <td>
                 <select form="${escapeHtml(formId)}" name="accountId">
@@ -2143,4 +2144,15 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function budgetFiscalYearOptions(selected: number, startMonth: number): string {
+  return Array.from({ length: 101 }, (_, index) => {
+    const year = 2000 + index;
+    return `<option value="${year}"${year === selected ? " selected" : ""}>${fiscalYearLabel(year, startMonth)}</option>`;
+  }).join("");
+}
+
+function budgetFiscalYearField(year: number, startMonth: number, error?: string): string {
+  return `<label>Fiscal year<select name="fiscalYear" required>${budgetFiscalYearOptions(year, startMonth)}</select>${errorText(error)}</label>`;
 }

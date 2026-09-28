@@ -1,3 +1,4 @@
+import { currentFiscalYear } from "./fiscalYears.ts";
 import { accountStats, createAccount, listAccounts } from "./accounts.ts";
 import {
   attemptLogin,
@@ -645,7 +646,7 @@ async function getBudget(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  const fiscalYear = parseBudgetYear(new URL(request.url));
+  const fiscalYear = parseBudgetYear(new URL(request.url), context.organization.fiscal_year_start_month);
   const [funds, accounts, budgetLines] = await Promise.all([
     listFunds(env, context.organization.id),
     listAccounts(env, context.organization.id),
@@ -672,7 +673,7 @@ async function postBudget(request: Request, env: Env): Promise<Response> {
   ]);
   const result = validateBudgetLineForm(form, accounts, funds, context.organization.id);
   if (!result.ok) {
-    const fiscalYear = fiscalYearFromForm(form);
+    const fiscalYear = fiscalYearFromForm(form, context.organization.fiscal_year_start_month);
     const budgetLines = await listBudgetLines(env, context.organization.id, fiscalYear);
     return budgetPage(env.APP_NAME, context, funds, accounts, budgetLines, fiscalYear, result.errors);
   }
@@ -697,7 +698,7 @@ async function postBudgetUpdate(request: Request, env: Env): Promise<Response> {
     listAccounts(env, context.organization.id)
   ]);
   const result = validateBudgetLineUpdateForm(form, accounts, funds, context.organization.id);
-  const fiscalYear = fiscalYearFromForm(form);
+  const fiscalYear = fiscalYearFromForm(form, context.organization.fiscal_year_start_month);
   if (!result.ok) {
     const budgetLines = await listBudgetLines(env, context.organization.id, fiscalYear);
     return budgetPage(env.APP_NAME, context, funds, accounts, budgetLines, fiscalYear, result.errors);
@@ -719,14 +720,14 @@ async function postBudgetDelete(request: Request, env: Env): Promise<Response> {
   if (csrfError) return csrfError;
 
   await deleteBudgetLine(env, context.organization.id, String(form.get("budgetLineId") ?? ""));
-  return redirect(`/budget?fiscalYear=${fiscalYearFromForm(form)}`);
+  return redirect(`/budget?fiscalYear=${fiscalYearFromForm(form, context.organization.fiscal_year_start_month)}`);
 }
 
 async function getBudgetReportPdf(request: Request, env: Env): Promise<Response> {
   const context = await requireAuth(request, env);
   if (context instanceof Response) return context;
 
-  const fiscalYear = parseBudgetYear(new URL(request.url));
+  const fiscalYear = parseBudgetYear(new URL(request.url), context.organization.fiscal_year_start_month);
   const report = await budgetReport(env, context.organization.id, context.organization.name, fiscalYear);
   const pdf = createBudgetReportPdf(report);
   return new Response(pdf, {
@@ -1265,7 +1266,7 @@ async function getBudgetVsActual(request: Request, env: Env): Promise<Response> 
   if (context instanceof Response) return context;
 
   const url = new URL(request.url);
-  const filters = parseBudgetVsActualFilters(url, context.organization.id);
+  const filters = parseBudgetVsActualFilters(url, context.organization.id, context.organization.fiscal_year_start_month);
   const [funds, accounts] = await Promise.all([
     listFunds(env, context.organization.id),
     listAccounts(env, context.organization.id)
@@ -1293,10 +1294,10 @@ async function postBudgetLines(request: Request, env: Env): Promise<Response> {
   ]);
   const result = validateBudgetLineForm(form, accounts, funds, context.organization.id);
   if (!result.ok) {
-    const year = Number(form.get("fiscalYear") ?? new Date().getFullYear());
+    const year = fiscalYearFromForm(form, context.organization.fiscal_year_start_month);
     const report = await budgetVsActual(env, {
       organizationId: context.organization.id,
-      fiscalYear: Number.isInteger(year) ? year : new Date().getFullYear()
+      fiscalYear: year
     });
     return budgetVsActualPage(env.APP_NAME, context, funds, accounts, report, result.errors);
   }
@@ -1436,14 +1437,16 @@ function validateReportDates(startDate: string, endDate: string): Record<string,
   return Object.keys(errors).length > 0 ? errors : null;
 }
 
-function parseBudgetYear(url: URL): number {
-  const value = Number(url.searchParams.get("fiscalYear") ?? new Date().getFullYear());
-  return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : new Date().getFullYear();
+function parseBudgetYear(url: URL, startMonth: number): number {
+  const fallback = currentFiscalYear(startMonth);
+  const value = Number(url.searchParams.get("fiscalYear") ?? fallback);
+  return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : fallback;
 }
 
-function fiscalYearFromForm(form: FormData): number {
-  const value = Number(form.get("fiscalYear") ?? new Date().getFullYear());
-  return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : new Date().getFullYear();
+function fiscalYearFromForm(form: FormData, startMonth: number): number {
+  const fallback = currentFiscalYear(startMonth);
+  const value = Number(form.get("fiscalYear") ?? fallback);
+  return Number.isInteger(value) && value >= 2000 && value <= 2100 ? value : fallback;
 }
 
 function csvResponse(csv: string, filename: string): Response {
